@@ -7,15 +7,17 @@
 
 set -euo pipefail
 
+echo "                             ###                ###       ## "
+echo "                              ##                 ## "
+echo "   ####    ######    ####     ##                 ##      ###     #####    ##  ##   ##  ## "
+echo "      ##    ##  ##  ##  ##    #####              ##       ##     ##  ##   ##  ##    #### "
+echo "   #####    ##      ##        ##  ##             ##       ##     ##  ##   ##  ##     ## "
+echo "  ##  ##    ##      ##  ##    ##  ##             ##       ##     ##  ##   ##  ##    #### "
+echo "   #####   ####      ####    ###  ##            ####     ####    ##  ##    ######  ##  ## "
 echo ""
-echo "┈┈╭━━━━━━━━━━━╮┈┈"
-echo "┈┈┃╭━━━╮┊╭━━━╮┃┈┈"
-echo "┈╭┫┃┈▇┈┃┊┃┈▇┈┃┣╮┈  INSTALAÇÃO DO ARCH + BTRFS"
-echo "┈┃┃╰━━━╯┊╰━━━╯┃┃┈"
-echo "┈╰┫╭━╮╰━━━╯╭━╮┣╯┈   Pt.01 - INSTALAÇÃO DA BASE"
-echo "┈┈┃┃┣┳┳┳┳┳┳┳┫┃┃┈┈   Pt.02 - CONFIGURAÇÕES PRÉ REINICIALIZAÇÃO"
-echo "┈┈┃┃╰┻┻┻┻┻┻┻╯┃┃┈┈"
-echo "┈┈╰━━━━━━━━━━━╯┈┈"
+echo "INSTALAÇÃO DO ARCH + BTRFS"
+echo "   Pt.01 - INSTALAÇÃO DA BASE"
+echo "   Pt.02 - CONFIGURAÇÕES PRÉ REINICIALIZAÇÃO"
 echo ""
 
 #------------------------------------------------------------------------------#
