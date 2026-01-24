@@ -54,7 +54,7 @@ echo " :: Atualizando sistema..."
 yay -Syyuu --noconfirm
 
 echo " :: Iniciando instalação Audio e Codecs"
-sleep 10
+sleep 5
 
 #------------------------------------------------------------------------------#
 #                          INSTALAÇÃO AUDIO E CODECS                           #
@@ -66,7 +66,7 @@ sudo pacman -S --needed --noconfirm \
   gst-plugins-ugly
 
 echo " :: Iniciando instalação NVIDIA Drivers"
-sleep 10
+sleep 5
 
 #------------------------------------------------------------------------------#
 #                                NVIDIA DRIVERS                                #
@@ -148,7 +148,7 @@ fi
 sudo mkinitcpio -P
 
 echo " :: Iniciando instalação Yazi"
-sleep 10
+sleep 5
 
 #------------------------------------------------------------------------------#
 #                               YAZI FILE MANAGER                              #
@@ -158,7 +158,7 @@ sudo pacman -Syy --noconfirm \
   yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick
 
 echo " :: Iniciando instalação Hyprland"
-sleep 10
+sleep 5
 
 #------------------------------------------------------------------------------#
 #                            HYPRLAND + FERRAMENTAS                            #
@@ -173,17 +173,22 @@ sudo pacman -S --needed --noconfirm \
 
 yay -S --noconfirm hyprshot wlogout google-chrome
 
-echo " :: Ativando Firewall e verificando Gamemode"
-sudo ufw enable
+echo " :: Verificando Gamemode"
 sudo usermod -aG gamemode "$USERNAME"
+sleep 2
+gamemoded -t || true
+sleep 5
+
+echo " :: Ativando Firewall"
+sudo ufw enable
+sudo systemctl enable ufw
 
 fastfetch
 sudo ufw status
-gamemoded -t
-sleep 10
+sleep 5
 
-echo " :: Ativando serviços de Audio e Firewall"
-systemctl --user enable pipewire pipewire-pulse wireplumber ufw
+echo " :: Ativando serviços de Audio"
+systemctl --user enable pipewire pipewire-pulse wireplumber
 
 echo ""
 echo " :: Desktop instalado com sucesso! Após reinicialização, inicie com '$ start-hyprland'."
