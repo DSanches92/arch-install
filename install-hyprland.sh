@@ -5,10 +5,32 @@
 
 set -euo pipefail
 
+echo ""
+echo "__░▒███████"
+echo "_░██▓▒░░▒▓██"
+echo "_██▓▒░__░▒▓██___██████"
+echo "_██▓▒░____░▓███▓__░▒▓██"
+echo "_██▓▒░___░▓██▓_____░▒▓██"
+echo "_██▓▒░_______________░▒▓██"
+echo "__██▓▒░______________░▒▓██"
+echo "___██▓▒░____________░▒▓██"
+echo "____██▓▒░__________░▒▓██"
+echo "_____██▓▒░________░▒▓██"
+echo "______██▓▒░_____░▒▓██"
+echo "_______██▓▒░__░▒▓██"
+echo "________█▓▒░░▒▓██"
+echo "__________░▒▓██"
+echo "________░▒▓██"
+echo "______░▒▓██"
+echo ""
+echo " INSTALAÇÃO HYPRLAND (AMD + NVIDIA OPEN)"
+echo ""
+
 #------------------------------------------------------------------------------#
 #                            CONFIGURAÇÕES INICIAIS                            #
 #------------------------------------------------------------------------------#
 
+USERNAME="danilo"
 GRUB_FILE="/etc/default/grub"
 MKINITCPIO_FILE="/etc/mkinitcpio.conf"
 GRUB_PARAMS="nvidia-drm.modeset=1 nvidia-drm.fbdev=1"
@@ -31,6 +53,9 @@ fi
 echo " :: Atualizando sistema..."
 yay -Syyuu --noconfirm
 
+echo " :: Iniciando instalação Audio e Codecs"
+sleep 10
+
 #------------------------------------------------------------------------------#
 #                          INSTALAÇÃO AUDIO E CODECS                           #
 #------------------------------------------------------------------------------#
@@ -38,7 +63,10 @@ echo " :: Instalando áudio + codecs..."
 sudo pacman -S --needed --noconfirm \
   pipewire pipewire-alsa pipewire-jack pipewire-pulse wireplumber \
   gstreamer gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad \
-  gst-plugins-ugly ffmpeg
+  gst-plugins-ugly
+
+echo " :: Iniciando instalação NVIDIA Drivers"
+sleep 10
 
 #------------------------------------------------------------------------------#
 #                                NVIDIA DRIVERS                                #
@@ -119,21 +147,46 @@ fi
 
 sudo mkinitcpio -P
 
+echo " :: Iniciando instalação Yazi"
+sleep 10
+
+#------------------------------------------------------------------------------#
+#                               YAZI FILE MANAGER                              #
+#------------------------------------------------------------------------------#
+echo " :: Instalando Gerenciados de Arquivos YAZI"
+sudo pacman -Syy --noconfirm \
+  yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick
+
+echo " :: Iniciando instalação Hyprland"
+sleep 10
+
 #------------------------------------------------------------------------------#
 #                            HYPRLAND + FERRAMENTAS                            #
 #------------------------------------------------------------------------------#
 echo " :: Hyprland + ferramentas..."
 sudo pacman -S --needed --noconfirm \
   hyprland hyprlock hypridle hyprcursor hyprpaper hyprpicker \
-  waybar kitty rofi-wayland yazi qt5-wayland qt6-wayland dunst \
+  waybar kitty rofi-wayland qt5-wayland qt6-wayland dunst ufw \
   xdg-desktop-portal-hyprland xdg-desktop-portal-gtk hyprpolkitagent \
   cliphist ttf-jetbrains-mono-nerd ttf-font-awesome noto-fonts-emoji \
-  noto-fonts pavucontrol egl-wayland
+  noto-fonts pavucontrol egl-wayland steam gamemode lib32-gamemode fastfetch
 
-sudo yay -S --noconfirm hyprshot wlogout google-chrome
+yay -S --noconfirm hyprshot wlogout google-chrome
 
-systemctl --user enable pipewire pipewire-pulse wireplumber
+echo " :: Ativando Firewall e verificando Gamemode"
+sudo ufw enable
+sudo usermod -aG gamemode "$USERNAME"
 
-echo " :: Desktop instalado! Reinicie ou execute Hyprland manualmente."
+fastfetch
+sudo ufw status
+gamemoded -t
+sleep 10
+
+echo " :: Ativando serviços de Audio e Firewall"
+systemctl --user enable pipewire pipewire-pulse wireplumber ufw
+
+echo ""
+echo " :: Desktop instalado com sucesso! Após reinicialização, inicie com '$ start-hyprland'."
+echo "Reiniciando em 10 segundos..."
 sleep 10
 shutdown -r now
