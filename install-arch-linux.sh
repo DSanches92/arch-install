@@ -201,7 +201,7 @@ EOF
   sed -i "/\[multilib\]/,/Include/ s/^#//" /etc/pacman.conf
 
   echo " :: Habilitando grupo wheel"
-  sed -i "s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers.d/wheel
+  sed -i "s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers
   grep wheel /etc/sudoers
 
   echo " :: Configurando Usuário e Senha"
