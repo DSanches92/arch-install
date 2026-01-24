@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 #
-# Instalação Arch + BTRFS = Hyprland (AMD + NVIDIA Open)
+# Instalação Arch + BTRFS
 # Executa Parte 1 (live) -> chroot -> Parte 2 automaticamente
 # Depois: logar como usuário e rodar script "install-hyprland.sh" separado
 #
 
 set -euo pipefail
+
+echo ""
+echo "┈┈╭━━━━━━━━━━━╮┈┈"
+echo "┈┈┃╭━━━╮┊╭━━━╮┃┈┈"
+echo "┈╭┫┃┈▇┈┃┊┃┈▇┈┃┣╮┈  INSTALAÇÃO DO ARCH + BTRFS"
+echo "┈┃┃╰━━━╯┊╰━━━╯┃┃┈"
+echo "┈╰┫╭━╮╰━━━╯╭━╮┣╯┈   Pt.01 - INSTALAÇÃO DA BASE"
+echo "┈┈┃┃┣┳┳┳┳┳┳┳┫┃┃┈┈   Pt.02 - CONFIGURAÇÕES PRÉ REINICIALIZAÇÃO"
+echo "┈┈┃┃╰┻┻┻┻┻┻┻╯┃┃┈┈"
+echo "┈┈╰━━━━━━━━━━━╯┈┈"
+echo ""
 
 #------------------------------------------------------------------------------#
 #                            CONFIGURAÇÕES INICIAIS                            #
@@ -16,6 +27,7 @@ HOSTNAME="dsanches"
 USERNAME="danilo"
 TIMEZONE="America/Sao_Paulo"
 LOCALE="pt_BR.UTF-8"
+LOCALE_FALLBACK="en_US.UTF-8"
 KEYMAP="br-abnt2"
 USER_PASSWORD="12345"
 ROOT_PASSWORD="12345"
@@ -25,9 +37,11 @@ ROOT_PASSWORD="12345"
 #------------------------------------------------------------------------------#
 if systemd-detect-virt --chroot >/dev/null 2>&1; then
   echo "=== MODO CHROOT ==="
+  echo ""
   IN_CHROOT=1
 else
   echo "=== MODO LIVE USB ==="
+  echo ""
   IN_CHROOT=0
 fi
 
@@ -37,24 +51,9 @@ fi
 if (( IN_CHROOT == 0 )); then
 
   loadkeys "$KEYMAP"
-  setfont ter-132b
   timedatectl set-ntp true
 
   ping -c 4 archlinux.org >/dev/null || { echo " :: Sem internet"; exit 1; }
-
-  echo " :: Otimizando lista de mirrors para o Brasil..."
-
-  pacman -Sy --noconfirm reflector || true
-  reflector --verbose \
-    --latest 10 \
-    --protocol https \
-    --sort rate \
-    --country Brazil,UnitedStates \
-    --save /etc/pacman.d/mirrorlist
-
-  echo " :: Mirrorlist atualizado:"
-  cat /etc/pacman.d/mirrorlist | grep -v '^#' | head -n 10
-  echo " :: ... (mostrando apenas os primeiros 10)"
 
   pacman -Syy --noconfirm
 
@@ -86,14 +85,14 @@ if (( IN_CHROOT == 0 )); then
     read -r -p "CONFIRMA? (todo o conteúdo será APAGADO) [S/N]: " confirma
     
     confirma=$(echo "$confirma" | tr '[:upper:]' '[:lower:]')
-    if [[ "$confirma" == "s" || "$confirma" == "sim" || "$confirma" == "y" || "$confirma" == "yes" ]]; then
+    if [[ "$confirma" == "s" || "$confirma" == "sim" ]]; then
       break
     else
       echo " :: Abortado. Escolha outro disco."
     fi
   done
 
-  if [[ -z "$DISK"]]; then
+  if [[ -z "$DISK" ]]; then
     echo " :: Nenhum disco selecionado! Abortando..."
     exit 1
   fi
@@ -101,16 +100,19 @@ if (( IN_CHROOT == 0 )); then
   echo " :: Disco selecionado: $DISK"
   lsblk -f
   echo " :: TODOS OS DADOS EM $DISK SERÃO APAGADOS!"
-  read -p "Seguir com a formatação do disco selecionado? [Y/n]" confirma
+  read -p "Seguir com a formatação do disco selecionado? [S/N]: " confirma
 
   confirma=$(echo "$confirma" | tr '[:upper:]' '[:lower:]')
-  [[ "$confirma" != "y" || "$confirma" != "s" || "$confirma" != "" ]]; && exit 1
+  if ! [[ "$confirma" == "s" || "$confirma" == "sim" ]]; then
+    exit 1
+  fi
 
+  wipefs -a "$DISK"
   sfdisk "$DISK" <<EOF
 label: gpt
-size=8G, type=82, name=swap
-size=600M, type=EF00, name=EFI
-type=8300, name=arch-root
+size=8G, type=swap, name=swap
+size=600M, type=uefi, name=EFI
+type=linux, name=arch-root
 EOF
 
   SWAP="${DISK}p1"
@@ -139,16 +141,25 @@ EOF
   
   mount "$EFI" /mnt/boot/efi
 
+  lsblk
+  echo " :: Continuando em 5 segundos..."
+  sleep 5
+
   pacstrap -K /mnt \
     base base-devel linux linux-headers linux-firmware power-profiles-daemon \
-    amd-ucode btrfs-progs openssh nano ntp git
+    amd-ucode btrfs-progs openssh nano ntp git ufw
   
+  echo ""
+  echo " :: Gerando fstab"
   genfstab -U /mnt >> /mnt/etc/fstab
+  sleep 10
 
+  echo ""
+  echo ""
   cp "$0" /mnt/root/install-arch-linux.sh
   chmod +x /mnt/root/install-arch-linux.sh
 
-  echo " :: Entrando no chroot... O script vai continuar sozinho"
+  echo " :: Entrando no chroot... O script vai continuar sozinho :)"
   arch-chroot /mnt /root/install-arch-linux.sh
 
   echo " :: Instalação base concluída. Reinicie e remova o pendrive."
@@ -163,63 +174,58 @@ fi
 #------------------------------------------------------------------------------#
 if (( IN_CHROOT == 1 )); then
 
+  echo " :: Setando o TimeZone e configurando localidade"
   ln -sf /usr/share/zoneinfo/"$TIMEZONE" /etc/localtime
   hwclock --systohc
   ntpdate a.ntp.br
   hwclock -w
 
-  sed -i "/en_US.UTF-8/s/^/#/" /etc/locale.gen
-  sed -i "/$LOCALE/s/#//" /etc/locale.gen
+  sed -i "s/^#$LOCALE_FALLBACK/$LOCALE_FALLBACK/" /etc/locale.gen
+  sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
   locale-gen
+
   echo "LANG=$LOCALE" >> /etc/locale.conf
   echo "KEYMAP=$KEYMAP" >> /etc/vconsole.conf
   export LANG="$LOCALE"
 
   echo "$HOSTNAME" >> /etc/hostname
   cat > /etc/hosts <<EOF
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   $HOSTNAME.localdomain $HOSTNAME
+127.0.0.1    localhost
+::1          localhost
+127.0.1.1    $HOSTNAME.localdomain    $HOSTNAME
 EOF
 
+  echo " :: Configurando arquivo pacman.conf"
   sed -i "s/^#Color/Color/" /etc/pacman.conf
-  sed -i "s/.*ParallelDownloads.*/ParallelDownloads = 10" /etc/pacman.conf
+  sed -i "s/.*ParallelDownloads.*/ParallelDownloads = 10/" /etc/pacman.conf
   sed -i "/\[multilib\]/,/Include/ s/^#//" /etc/pacman.conf
 
-  # Habilita grupo wheel
+  echo " :: Habilitando grupo wheel"
   sed -i "s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers.d/wheel
   grep wheel /etc/sudoers
 
-  # Usuários e senhas
+  echo " :: Configurando Usuário e Senha"
   echo "root:$ROOT_PASSWORD" | chpasswd
   useradd -mG wheel "$USERNAME"
   usermod -aG storage,power,audio "$USERNAME"
   echo "$USERNAME:$USER_PASSWORD" | chpasswd
 
-  pacman -Syy --noconfirm \
-    dosfstools mtools networkmanager grub-efi-x86_64 efibootmgr \
-    ufw fastfetch steam gamemode lib32-gamemode
+  echo " :: Instalando pacotes básicos para reinicialização"
+  pacman -Syy --noconfirm dosfstools mtools networkmanager grub efibootmgr
 
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ArchLinux --recheck
   grub-mkconfig -o /boot/grub/grub.cfg
 
-  ufw enable
-
-  systemctl enable NetworkManager ufw
-
-  usermod -aG gamemode "$USERNAME"
+  systemctl enable NetworkManager
 
   rm -f /root/install-arch-linux.sh
 
   echo ""
   echo "============================================================"
   echo "  Fase base concluída!"
-  echo "  Reinicie, logue como $USERNAME e execute:"
-  echo "  sudo pacman -Syyuu"
+  echo "  Reinicie, logue como '$USERNAME'"
   echo ""
-  echo "  Execute também:"
-  echo "  gamemoded -t"
-  echo "  Depois rode o script install-hyprland.sh (copie ele antes)"
+  echo "  Rode o script install-hyprland.sh (copie ele antes)"
   echo "============================================================"
   exit 0
 
