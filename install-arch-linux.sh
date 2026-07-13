@@ -7,13 +7,14 @@
 
 set -euo pipefail
 
-echo "                             ###                ###       ## "
-echo "                              ##                 ## "
-echo "   ####    ######    ####     ##                 ##      ###     #####    ##  ##   ##  ## "
-echo "      ##    ##  ##  ##  ##    #####              ##       ##     ##  ##   ##  ##    #### "
-echo "   #####    ##      ##        ##  ##             ##       ##     ##  ##   ##  ##     ## "
-echo "  ##  ##    ##      ##  ##    ##  ##             ##       ##     ##  ##   ##  ##    #### "
-echo "   #####   ####      ####    ###  ##            ####     ####    ##  ##    ######  ##  ## "
+echo ""
+echo "                             ###                ###       ##                               "
+echo "                              ##                 ##                                        "
+echo "   ####    ######    ####     ##                 ##      ###     #####    ##  ##   ##  ##  "
+echo "      ##    ##  ##  ##  ##    #####              ##       ##     ##  ##   ##  ##    ####   "
+echo "   #####    ##      ##        ##  ##             ##       ##     ##  ##   ##  ##     ##    "
+echo "  ##  ##    ##      ##  ##    ##  ##             ##       ##     ##  ##   ##  ##    ####   "
+echo "   #####   ####      ####    ###  ##            ####     ####    ##  ##    ######  ##  ##  "
 echo ""
 echo "INSTALAÇÃO DO ARCH + BTRFS"
 echo "   Pt.01 - INSTALAÇÃO DA BASE"
@@ -52,6 +53,15 @@ fi
 #------------------------------------------------------------------------------#
 if (( IN_CHROOT == 0 )); then
 
+  # Verifica se está em modo UEFI (obrigatório para este script)
+  if [[ ! -d /sys/firmware/efi ]]; then
+    echo ""
+    echo " :: ERRO: Sistema não foi inicializado em modo UEFI."
+    echo " :: Este script requer UEFI. Reinicie e selecione UEFI na BIOS."
+    echo ""
+    exit 1
+  fi
+
   loadkeys "$KEYMAP"
   timedatectl set-ntp true
 
@@ -85,7 +95,7 @@ if (( IN_CHROOT == 0 )); then
     echo ""
 
     read -r -p "CONFIRMA? (todo o conteúdo será APAGADO) [S/N]: " confirma
-    
+
     confirma=$(echo "$confirma" | tr '[:upper:]' '[:lower:]')
     if [[ "$confirma" == "s" || "$confirma" == "sim" ]]; then
       break
@@ -99,15 +109,7 @@ if (( IN_CHROOT == 0 )); then
     exit 1
   fi
 
-  echo " :: Disco selecionado: $DISK"
-  lsblk -f
   echo " :: TODOS OS DADOS EM $DISK SERÃO APAGADOS!"
-  read -p "Seguir com a formatação do disco selecionado? [S/N]: " confirma
-
-  confirma=$(echo "$confirma" | tr '[:upper:]' '[:lower:]')
-  if ! [[ "$confirma" == "s" || "$confirma" == "sim" ]]; then
-    exit 1
-  fi
 
   wipefs -a "$DISK"
   sfdisk "$DISK" <<EOF
@@ -117,9 +119,17 @@ size=600M, type=uefi, name=EFI
 type=linux, name=arch-root
 EOF
 
-  SWAP="${DISK}p1"
-  EFI="${DISK}p2"
-  ROOT="${DISK}p3"
+  # Aguarda o kernel re-ler a tabela de partições
+  sleep 2
+
+  if [[ "$DISK" =~ nvme || "$DISK" =~ mmcblk ]]; then
+    PART="${DISK}p"
+  else
+    PART="${DISK}"
+  fi
+  SWAP="${PART}1"
+  EFI="${PART}2"
+  ROOT="${PART}3"
 
   mkswap -L swap "$SWAP" && swapon "$SWAP"
   mkfs.fat -F32 -n EFI "$EFI"
@@ -130,17 +140,19 @@ EOF
   btrfs subvolume create /mnt/@home
   btrfs subvolume create /mnt/@cache
   btrfs subvolume create /mnt/@log
+  btrfs subvolume create /mnt/@.snapshots
   umount /mnt
 
-  OPTS_GERAL="noatime,compress=zstd:3,space_cache=v2,discard=async,autodefrag,ssd,commit=120"
+  OPTS_GERAL="noatime,compress=zstd:3,space_cache=v2,discard=async,autodefrag,ssd,commit=30"
 
   mount -o $OPTS_GERAL,subvol=@ "$ROOT" /mnt
-  mkdir -p /mnt/{boot/efi,home,var/{cache,log}}
+  mkdir -p /mnt/{boot/efi,home,.snapshots,var/{cache,log}}
 
   mount -o $OPTS_GERAL,subvol=@home "$ROOT" /mnt/home
   mount -o $OPTS_GERAL,subvol=@cache "$ROOT" /mnt/var/cache
   mount -o $OPTS_GERAL,subvol=@log "$ROOT" /mnt/var/log
-  
+  mount -o $OPTS_GERAL,subvol=@.snapshots "$ROOT" /mnt/.snapshots
+
   mount "$EFI" /mnt/boot/efi
 
   lsblk
@@ -148,9 +160,9 @@ EOF
   sleep 5
 
   pacstrap -K /mnt \
-    base base-devel linux linux-headers linux-firmware power-profiles-daemon \
-    amd-ucode btrfs-progs openssh nano ntp git ufw
-  
+    base base-devel linux-zen linux-zen-headers linux-firmware \
+    amd-ucode btrfs-progs openssh nano git ufw
+
   echo ""
   echo " :: Gerando fstab"
   genfstab -U /mnt >> /mnt/etc/fstab
@@ -179,8 +191,7 @@ if (( IN_CHROOT == 1 )); then
   echo " :: Setando o TimeZone e configurando localidade"
   ln -sf /usr/share/zoneinfo/"$TIMEZONE" /etc/localtime
   hwclock --systohc
-  ntpdate a.ntp.br
-  hwclock -w
+  timedatectl set-ntp true
 
   sed -i "s/^#$LOCALE_FALLBACK/$LOCALE_FALLBACK/" /etc/locale.gen
   sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
@@ -213,12 +224,22 @@ EOF
   echo "$USERNAME:$USER_PASSWORD" | chpasswd
 
   echo " :: Instalando pacotes básicos para reinicialização"
-  pacman -Syy --noconfirm dosfstools mtools networkmanager grub efibootmgr
+  pacman -Syy --noconfirm dosfstools networkmanager grub efibootmgr go
 
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ArchLinux --recheck
   grub-mkconfig -o /boot/grub/grub.cfg
 
   systemctl enable NetworkManager
+  systemctl enable ufw
+  ufw --force enable
+  systemctl enable fstrim.timer
+
+  echo " :: Instalando Paru (AUR Helper)"
+  sudo -u "$USERNAME" git clone https://aur.archlinux.org/paru.git /tmp/paru
+  cd /tmp/paru
+  sudo -u "$USERNAME" makepkg -c
+  pacman -U --noconfirm paru-*.pkg.tar.zst
+  rm -rf /tmp/paru
 
   rm -f /root/install-arch-linux.sh
 
@@ -227,7 +248,6 @@ EOF
   echo "  Fase base concluída!"
   echo "  Reinicie, logue como '$USERNAME'"
   echo ""
-  echo "  Rode o script install-hyprland.sh (copie ele antes)"
   echo "============================================================"
   exit 0
 
