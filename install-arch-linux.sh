@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# Instalação Arch + BTRFS
+# Script de Pós-Instalação — Arch Linux + BTRFS
+# Hardware: Ryzen 5 3600 · RTX 2060 · NVMe 1TB · 16GB RAM
+#
 # Executa Parte 1 (live) -> chroot -> Parte 2 automaticamente
-# Depois: logar como usuário e rodar script "install-hyprland.sh" separado
+# Depois: logar como usuário e rodar script "post-install.sh"
+#
+# Adicione esse script dentro do pen-drive bootável com Arch Linux.
 #
 
 set -euo pipefail
