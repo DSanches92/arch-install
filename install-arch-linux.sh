@@ -276,7 +276,7 @@ EOF
 
   echo -e "${BLUE}:: [6/7] Instalando pacotes essenciais e configurando boot...${NC}"
   echo -e "${YELLOW}:: Instalando GRUB, NetworkManager e dependências...${NC}"
-  pacman -Syy --noconfirm dosfstools networkmanager grub efibootmgr go
+  pacman -Syy --noconfirm dosfstools networkmanager grub efibootmgr go irqbalance
 
   echo -e "${YELLOW}:: Instalando GRUB na partição EFI...${NC}"
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ArchLinux --recheck
