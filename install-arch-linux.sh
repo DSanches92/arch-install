@@ -194,7 +194,7 @@ EOF
   echo -e "${BLUE}:: [7/8] Instalando pacotes base (pacstrap)...${NC}"
   pacstrap -K /mnt \
     base base-devel linux-zen linux-zen-headers linux-firmware \
-    amd-ucode btrfs-progs openssh nano git ufw
+    amd-ucode btrfs-progs openssh nano git ufw cargo
 
   echo ""
   echo -e "${BLUE}:: [8/8] Gerando fstab e preparando chroot...${NC}"
