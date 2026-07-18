@@ -140,16 +140,15 @@ echo "export TERMINAL=kitty" >> ~/.bashrc
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [6/6] Instalando pacotes para jogos e otimizações de desempenho...${NC}"
 
-# Steam + Gamemode + MangoHud + Gamescope + Wine (repositórios oficiais)
-echo -e "${YELLOW}:: Instalando Steam, Gamemode, MangoHud, Gamescope e Wine...${NC}"
+# Steam + Gamemode + MangoHud + Gamescope (repositórios oficiais)
+echo -e "${YELLOW}:: Instalando Steam, Gamemode, MangoHud e Gamescope...${NC}"
 sudo pacman -S --needed --noconfirm \
     steam \
     gamemode lib32-gamemode \
     mangohud lib32-mangohud \
     gamescope \
     lutris \
-    wine winetricks wine-mono wine-gecko \
-    dxvk
+    winetricks
 
 # Proton GE (AUR) — essencial para Ark: Survival Ascended (Unreal Engine 5)
 echo -e "${YELLOW}:: Instalando Proton GE e ProtonUp-Qt do AUR...${NC}"
