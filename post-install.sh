@@ -188,7 +188,8 @@ paru -S --needed --noconfirm \
   lame \
   x264 \
   x265 \
-  xvidcore
+  xvidcore \
+  pavucontrol
 
 echo ""
 echo -e "${YELLOW}:: Ativando serviços de áudio (usuário)...${NC}"
