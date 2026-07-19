@@ -143,10 +143,32 @@ passmenu --type $DMENU_ARGS
 SCRIPTEOF
 fi
 
+# Configuração controle de ociosidade
+if [ ! -f ~/.config/i3/anti-sleep.sh ]; then
+  cat > ~/.config/i3/anti-sleep.sh << 'SCRIPTEOF'
+#!/bin/bash
+
+# Script para impedir suspensão se houver áudio tocando (Pipewire/PulseAudio)
+while true; do
+  if pactl list sinks | grep -q "State: RUNNING"; then
+    xset s reset
+  fi
+
+  sleep 60
+done
+SCRIPTEOF
+fi
+
+# Permissão deexecução para os scripts
+chmod +x ~/.config/dmenu/dmenu-run.sh
+chmod +x ~/.config/dmenu/passmenu-run.sh
+chmod +x ~/.config/i3/anti-sleep.sh
+
 # Se não houver uma configuração padrão do i3, cria uma inicial para não dar tela preta
 if [ ! -f ~/.config/i3/config ]; then
   cat > ~/.config/i3/config << 'EOF'
 exec --no-startup-id gnome-keyring-daemon --start --components=pkcs11,secrets,ssh
+exec --no-startup-id ~/.config/i3/anti-sleep.sh
 
 exec_always --no-startup-id picom -b
 exec_always --no-startup-id nm-applet
