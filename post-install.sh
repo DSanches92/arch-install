@@ -63,8 +63,17 @@ echo ""
 paru -Syyuu --noconfirm
 
 echo ""
-echo -e "${YELLOW}:: Instalando Python (necessário para scripts auxiliares)...${NC}"
-sudo pacman -S --needed --noconfirm python
+echo -e "${YELLOW}:: Instalando pacotes complementares e Fonts...${NC}"
+paru -S --needed --noconfirm \
+  python \
+  rsync \
+  fastfetch \
+  ttf-iosevka-nerd \
+  ttf-roboto-mono \
+  ttf-opensans \
+  ttf-hack-nerd \
+  otf-geist-mono-nerd \
+  noto-fonts-emoji
 
 echo ""
 echo -e "${GREEN}:: [1/5] Concluído.${NC}"
@@ -77,7 +86,7 @@ echo -e "${BLUE}:: [2/5] Instalando drivers NVIDIA (RTX 2060 / Turing)...${NC}"
 echo ""
 
 # DKMS: compila o módulo aberto (Turing+) contra o linux-zen instalado
-sudo pacman -S --needed --noconfirm \
+paru -S --needed --noconfirm \
   nvidia-open-dkms \
   nvidia-utils \
   lib32-nvidia-utils \
@@ -154,10 +163,10 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   3. ÁUDIO (PIPEWIRE + WIREPLUMBER)                         #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/5] Instalando PipeWire, WirePlumber e codecs...${NC}"
+echo -e "${BLUE}:: [3/5] Instalando servidores de áudio, drivers de vídeo e codecs...${NC}"
 echo ""
 
-sudo pacman -S --needed --noconfirm \
+paru -S --needed --noconfirm \
   pipewire \
   pipewire-alsa \
   pipewire-jack \
@@ -176,11 +185,8 @@ sudo pacman -S --needed --noconfirm \
   mesa-utils \
   vulkan-icd-loader \
   lib32-mesa-utils \
-  lib32-vulkan-icd-loader
-
-# Instala codecs AUR via paru
-echo -e "${YELLOW}:: Instalando codecs de áudio/vídeo do AUR...${NC}"
-paru -S --needed --noconfirm \
+  lib32-vulkan-icd-loader \
+  speech-dispatcher \
   a52dec \
   faac \
   faad2 \
@@ -188,8 +194,7 @@ paru -S --needed --noconfirm \
   lame \
   x264 \
   x265 \
-  xvidcore \
-  pavucontrol
+  xvidcore
 
 echo ""
 echo -e "${YELLOW}:: Ativando serviços de áudio (usuário)...${NC}"

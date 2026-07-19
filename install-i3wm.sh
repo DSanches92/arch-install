@@ -3,7 +3,7 @@
 # Script de Instalação do Ambiente Gráfico i3wm
 # Customizado para: Danilo (Arch Linux + Zen Kernel)
 #
-# Terminal: Kitty | Gerenciador de Arquivos: Thunar & Yazi
+# Terminal: Alacritty | Gerenciador de Arquivos: Thunar & Yazi
 #
 
 set -euo pipefail
@@ -40,18 +40,17 @@ if ! command -v paru &> /dev/null; then
 fi
 
 #------------------------------------------------------------------------------#
-# 2. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA (PACMAN)
+# 2. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/6] Instalando i3wm e pacotes gráficos essenciais do Pacman...${NC}"
+echo -e "${BLUE}:: [1/6] Instalando i3wm e pacotes gráficos essenciais...${NC}"
 
-sudo pacman -S --needed --noconfirm \
-    i3-wm \
-    xorg-server \
-    xorg-xinit \
-    lightdm \
-    lightdm-gtk-greeter \
+paru -S --needed --noconfirm \
+    xorg-server xorg-xinit xorg-xauth xorg-xrandr \
+    xf86-input-libinput xf86-video-amdgpu \
+    i3-wm i3status \
+    ly \
+    dmenu \
     picom \
-    rofi \
     dunst \
     feh \
     xss-lock \
@@ -65,11 +64,12 @@ sudo pacman -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 # 3. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/6] Instalando Kitty, Thunar (e utilitários) e Yazi...${NC}"
+echo -e "${BLUE}:: [2/6] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 
 # Thunar + Integrações de mídia, compactação e volume
-sudo pacman -S --needed --noconfirm \
-    kitty \
+paru -S --needed --noconfirm \
+    alacritty \
+    firefox \
     thunar \
     thunar-volman \
     thunar-archive-plugin \
@@ -77,82 +77,114 @@ sudo pacman -S --needed --noconfirm \
     gvfs \
     tumbler \
     ffmpegthumbnailer \
-    yazi \
-    file-roller
-
-#------------------------------------------------------------------------------#
-# 4. FONTES E TEMAS (ESSENCIAIS PARA O VISUAL DO KEYITDEV)
-#------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/6] Instalando Fontes de Ícones (Nerd Fonts) e Temas...${NC}"
-
-# Fontes e utilitários estéticos via Pacman
-sudo pacman -S --needed --noconfirm \
-    ttf-roboto-mono \
-    ttf-opensans \
-    papirus-icon-theme \
-    lxappearance \
-    btop \
-    fastfetch
-
-# Componentes estéticos da comunidade (AUR via Paru)
-# polybar (barra de status), i3lock-color (tela de bloqueio linda com blur) e ttf-iosevka-nerd
-echo -e "${YELLOW}:: Compilando/Instalando pacotes do AUR (Polybar, i3lock-color, Fontes)...${NC}"
-paru -S --needed --noconfirm \
+    yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp\
+    file-roller \
     polybar \
     i3lock-color \
-    ttf-iosevka-nerd \
-    networkmanager-dmenu-git
+    networkmanager-dmenu-git \
+    catppuccin-gtk-theme-macchiato papirus-icon-theme lxappearance \
+    btop \
+    pavucontrol \
+    pass xdotool keychain
 
 #------------------------------------------------------------------------------#
 # 5. AJUSTES DE CONFIGURAÇÃO E SERVIÇOS
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [4/6] Habilitando serviços do sistema (LightDM e Bluetooth)...${NC}"
+echo -e "${BLUE}:: [4/6] Habilitando serviços do sistema (Ly e Bluetooth)...${NC}"
 
-# Habilitar o gerenciador de login LightDM
-sudo systemctl enable lightdm.service
+# Habilitar o gerenciador de login
+sudo systemctl enable ly.service
 
 # Habilitar serviço do Bluetooth
 sudo systemctl enable --now bluetooth.service
 
 # Criar os diretórios padrões de configuração para evitar erros de inicialização
 echo -e "${BLUE}:: Criando diretórios padrão em ~/.config...${NC}"
-mkdir -p ~/.config/{i3,polybar,rofi,dunst,kitty,yazi}
+mkdir -p ~/.config/{i3,dmenu,polybar,dunst,alacritty,yazi}
+
+# Configuração do dmenu
+if [ ! -f ~/.config/dmenu/dmenu-run.sh ]; then
+  cat > ~/.config/dmenu/dmenu-run.sh << 'SCRIPTEOF'
+#!/bin/bash
+
+# Configuração da Fonte
+FONTE="Geist Nerd Font-11"
+
+# Paleta Catppuccin Macchiato
+BACKGROUND="#24273a"  # Base
+TEXTO_NORMAL="#cad3f5" # Text
+SELECIONADO="#c6a0f6"  # Mauve
+TEXTO_SEL="#24273a"    # Base
+
+# Executa o dmenu original passando as configurações
+dmenu_run -fn "$FONTE" -nb "$BACKGROUND" -nf "$TEXTO_NORMAL" -sb "$SELECIONADO" -sf "$TEXTO_SEL" -i
+SCRIPTEOF
+fi
+
+# Configuração para Passmenu
+if [ ! -f ~/.config/dmenu/passmenu-run.sh ]; then
+  cat > ~/.config/dmenu/passmenu-run.sh << 'SCRIPTEOF'
+#!/bin/bash
+
+# Configuração da Fonte
+FONTE="Geist Nerd Font-12"
+
+# Paleta Catppuccin Macchiato
+BACKGROUND="#24273a"   # Base
+TEXTO_NORMAL="#cad3f5" # Text
+SELECIONADO="#c6a0f6"  # Mauve
+TEXTO_SEL="#24273a"    # Base
+
+# Argumentos visuais do dmenu encapsulados
+DMENU_ARGS="-fn $FONTE -nb $BACKGROUND -nf $TEXTO_NORMAL -sb $SELECIONADO -sf $TEXTO_SEL -i"
+
+# Executa o passmenu original injetando os nossos parâmetros visuais do dmenu
+passmenu --type $DMENU_ARGS
+SCRIPTEOF
+fi
 
 # Se não houver uma configuração padrão do i3, cria uma inicial para não dar tela preta
 if [ ! -f ~/.config/i3/config ]; then
-    echo ":: Gerando arquivo de configuração inicial básico para o i3..."
-    echo "exec_always --no-startup-id picom -b" > ~/.config/i3/config
-    echo "exec_always --no-startup-id nm-applet" >> ~/.config/i3/config
-    echo "exec_always --no-startup-id /usr/lib/mate-polkit/polkit-mate-authentication-agent-1" >> ~/.config/i3/config
-    echo "bindsym Mod4+Return exec kitty" >> ~/.config/i3/config
-    echo "bindsym Mod4+d exec rofi -show drun" >> ~/.config/i3/config
+  cat > ~/.config/i3/config << 'EOF'
+exec --no-startup-id gnome-keyring-daemon --start --components=pkcs11,secrets,ssh
+
+exec_always --no-startup-id picom -b
+exec_always --no-startup-id nm-applet
+exec_always --no-startup-id setxkbmap -layout br -model abnt2
+exec_always --no-startup-id /usr/lib/mate-polkit/polkit-mate-authentication-agent-1
+exec_always --no-startup-id dbus-update-activation-environment --systemd DISPLAY XAUTHORITY
+
+bindsym Mod4+q kill
+
+bindsym Mod4+Return exec alacritty
+bindsym Mod4+Shift+e exec --no-startup-id alacritty -e yazi
+bindsym Mod4+d exec --no-startup-id ~/.config/dmenu/dmenu-run.sh
+bindsym Mod4+p exec --no-startup-id ~/.config/dmenu/passmenu-run.sh
+bindsym Mod4+b exec firefox
+EOF
 fi
 
 #------------------------------------------------------------------------------#
-# 6. CONFIGURAÇÃO DO KITTY COMO TERMINAL PADRÃO DO SISTEMA
+# 6. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [5/6] Definindo o Kitty como terminal padrão...${NC}"
-export TERMINAL=kitty
-echo "export TERMINAL=kitty" >> ~/.bashrc
+echo -e "${BLUE}:: [5/6] Definindo o Alacritty como terminal padrão...${NC}"
+export TERMINAL=alacritty
+echo "export TERMINAL=alacritty" >> ~/.bashrc
 
 #------------------------------------------------------------------------------#
 # 7. INSTALAÇÃO DE PACOTES PARA JOGOS (STEAM, PROTON, OTIMIZAÇÕES)
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [6/6] Instalando pacotes para jogos e otimizações de desempenho...${NC}"
 
-# Steam + Gamemode + MangoHud + Gamescope (repositórios oficiais)
-echo -e "${YELLOW}:: Instalando Steam, Gamemode, MangoHud e Gamescope...${NC}"
-sudo pacman -S --needed --noconfirm \
+# Steam + Gamemode + MangoHud + Gamescope
+echo -e "${YELLOW}:: Instalando Steam, Gamemode, MangoHud, Gamescope, Proton GE e ProtonUp-Qt...${NC}"
+paru -S --needed --noconfirm \
     steam \
     gamemode lib32-gamemode \
     mangohud lib32-mangohud \
     gamescope \
     lutris \
-    winetricks
-
-# Proton GE (AUR) — essencial para Ark: Survival Ascended (Unreal Engine 5)
-echo -e "${YELLOW}:: Instalando Proton GE e ProtonUp-Qt do AUR...${NC}"
-paru -S --needed --noconfirm \
+    winetricks \
     proton-ge-custom \
     protonup-qt
 
@@ -166,7 +198,7 @@ sudo usermod -aG gamemode "$USER"
 # --- MangoHud (overlay de desempenho) ---
 echo -e "${YELLOW}:: Configurando MangoHud (overlay de FPS, CPU/GPU)...${NC}"
 mkdir -p ~/.config/MangoHud
-cat > ~/.config/MangoHud/MangoHud.conf <<-'EOF'
+cat > ~/.config/MangoHud/MangoHud.conf << 'EOF'
 # MangoHud — Configuração para jogos (Ark: Survival Ascended)
 fps
 frame_timing=0
@@ -343,11 +375,11 @@ echo "  ║   Instalação concluída com sucesso!                      ║"
 echo "  ╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 echo -e "  ${YELLOW}Próximos Passos:${NC}"
-echo -e "  1. Reinicie o sistema para subir a tela de login (LightDM):"
+echo -e "  1. Reinicie o sistema para subir a tela de login (Ly):"
 echo -e "     ${GREEN}sudo reboot${NC}"
 echo ""
 echo -e "  2. Quando fizer login na interface i3wm:"
-echo -e "     - Pressione ${BLUE}Super + Enter${NC} para abrir o seu novíssimo terminal ${GREEN}Kitty${NC}."
+echo -e "     - Pressione ${BLUE}Super + Enter${NC} para abrir o seu novíssimo terminal ${GREEN}Alacritty${NC}."
 echo -e "     - Pressione ${BLUE}Super + D${NC} para abrir o inicializador ${GREEN}Rofi${NC}."
 echo -e "     - No terminal, digite ${GREEN}thunar${NC} para o gerenciador gráfico ou ${GREEN}yazi${NC} para o terminal."
 echo ""

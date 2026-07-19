@@ -193,8 +193,10 @@ EOF
 
   echo -e "${BLUE}:: [7/8] Instalando pacotes base (pacstrap)...${NC}"
   pacstrap -K /mnt \
-    base base-devel linux-zen linux-zen-headers linux-firmware \
-    amd-ucode btrfs-progs openssh nano git ufw cargo
+    base base-devel \
+    linux-zen linux-zen-headers linux-firmware \
+    amd-ucode btrfs-progs \
+    nano openssh git cargo
 
   echo ""
   echo -e "${BLUE}:: [8/8] Gerando fstab e preparando chroot...${NC}"
@@ -276,17 +278,24 @@ EOF
 
   echo -e "${BLUE}:: [6/7] Instalando pacotes essenciais e configurando boot...${NC}"
   echo -e "${YELLOW}:: Instalando GRUB, NetworkManager e dependências...${NC}"
-  pacman -Syy --noconfirm dosfstools networkmanager grub efibootmgr go irqbalance
+  pacman -Syy --noconfirm \
+    dosfstools networkmanager ufw \
+    grub efibootmgr \
+    go irqbalance
 
+  echo ""
   echo -e "${YELLOW}:: Instalando GRUB na partição EFI...${NC}"
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ArchLinux --recheck
   grub-mkconfig -o /boot/grub/grub.cfg
 
+  echo ""
   echo -e "${YELLOW}:: Habilitando serviços de sistema...${NC}"
+
   systemctl enable NetworkManager
   systemctl enable ufw
   ufw --force enable
   systemctl enable fstrim.timer
+
   echo -e "${GREEN}:: [OK] Boot e serviços configurados.${NC}"
   echo ""
 

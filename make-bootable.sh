@@ -22,9 +22,9 @@ SCRIPTS=(
 )
 
 echo -e "${BLUE}"
-echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║            CRIAÇÃO DE PENDRIVE BOOTÁVEL                  ║"
-echo "  ╚══════════════════════════════════════════════════════════╝"
+echo "  ╔═══════════════════════════════════════════════════════════"
+echo "    > CRIAÇÃO DE PENDRIVE BOOTÁVEL"
+echo "  ╚═══════════════════════════════════════════════════════════"
 echo -e "${NC}"
 
 #------------------------------------------------------------------------------#
@@ -78,10 +78,12 @@ echo ""
 lsblk -f "$DISK"
 echo ""
 
-echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${RED}║  ATENÇÃO: TODOS OS DADOS EM $DISK SERÃO APAGADOS!         ${NC}"
-echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
-echo ""
+echo -e "${RED}"
+echo "  ╔═══════════════════════════════════════════════════════════"
+echo "    > ATENÇÃO: TODOS OS DADOS EM $DISK SERÃO APAGADOS!"
+echo "  ╚═══════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
 read -r -p "  CONFIRMA? [S/N]: " confirma
 
 confirma=$(echo "$confirma" | tr '[:upper:]' '[:lower:]')
@@ -237,9 +239,9 @@ sudo eject "$DISK" 2>/dev/null || sudo udisksctl power-off -b "$DISK" 2>/dev/nul
 
 echo ""
 echo -e "${GREEN}"
-echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║   Pendrive bootável criado com sucesso!                  ║"
-echo "  ╚══════════════════════════════════════════════════════════╝"
+echo "  ╔═══════════════════════════════════════════════════════════"
+echo "    > Pendrive bootável criado com sucesso!"
+echo "  ╚═══════════════════════════════════════════════════════════"
 echo -e "${NC}"
 echo -e "  Dispositivo: ${GREEN}$DISK${NC}"
 echo -e "  ISO:         ${GREEN}$ISO${NC}"
@@ -247,7 +249,8 @@ echo ""
 echo -e "  ${YELLOW}Pronto! O pendrive pode ser removido com segurança.${NC}"
 echo ""
 echo -e "  ${YELLOW}📌 Ao bootar o Arch Live, monte a partição EFI para acessar os scripts:${NC}"
-echo -e "     ${GREEN}lsblk${NC}                          # Descubra o dispositivo (ex: sda, sdb)"
-echo -e "     ${GREEN}sudo mount /dev/sdX2 /mnt${NC}      # Monte a partição VFAT (troque X pelo letra)"
-echo -e "     ${GREEN}ls /mnt/${NC}                        # Scripts estarão aqui"
-echo -e "     ${GREEN}./mnt/install-arch-linux.sh${NC}     # Inicie a instalação"
+echo -e "     ${GREEN}lsblk${NC}                             # Descubra o dispositivo (ex: sda, sdb)"
+echo -e "     ${GREEN}sudo mount /dev/sdX2 /mnt${NC}         # Monte a partição VFAT (troque X pelo letra)"
+echo -e "     ${GREEN}ls /mnt/${NC}                          # Scripts estarão aqui"
+echo -e "     ${GREEN}cp /mnt/install-arch-linux.sh ./${NC}  # Mova o script para a raiz do Arch Live"
+echo -e "     ${GREEN}./install-arch-linux.sh${NC}           # Inicie o script para instalação automatizada"
