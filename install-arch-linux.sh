@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 #
-# Script de Pós-Instalação — Arch Linux + BTRFS
+# Script de Instalação — Arch Linux + BTRFS
 # Hardware: Ryzen 5 3600 · RTX 2060 · NVMe 1TB · 16GB RAM
 #
 # Executa Parte 1 (live) -> chroot -> Parte 2 automaticamente
 # Depois: logar como usuário e rodar script "post-install.sh"
-#
-# Adicione esse script dentro do pen-drive bootável com Arch Linux.
 #
 
 set -euo pipefail
@@ -20,8 +18,8 @@ NC='\033[0m'
 
 echo -e "${BLUE}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║        INSTALAÇÃO DO ARCH LINUX + BTRFS                  ║"
-echo "  ║        Ryzen 5 3600 · RTX 2060 · NVMe · 16GB             ║"
+echo "  ║             INSTALAÇÃO DO ARCH LINUX + BTRFS             ║"
+echo "  ║       Ryzen 5 3600 · RTX 2060 · NVMe 1TB · 16GB RAM      ║"
 echo "  ║                                                          ║"
 echo "  ║   Pt.01 - INSTALAÇÃO DA BASE                             ║"
 echo "  ║   Pt.02 - CONFIGURAÇÕES PRÉ REINICIALIZAÇÃO              ║"

@@ -46,8 +46,9 @@ echo -e "${BLUE}:: [1/6] Instalando i3wm e pacotes gráficos essenciais...${NC}"
 
 paru -S --needed --noconfirm \
     xorg-server xorg-xinit xorg-xauth xorg-xrandr \
+    xorg-xset xorg-xprop xorg-xev xclip \
     xf86-input-libinput xf86-video-amdgpu \
-    i3-wm i3status \
+    i3-wm i3status i3lock-color \
     ly \
     dmenu \
     picom \
@@ -59,7 +60,8 @@ paru -S --needed --noconfirm \
     network-manager-applet \
     bluez \
     bluez-utils \
-    blueman
+    blueman \
+    zed-git
 
 #------------------------------------------------------------------------------#
 # 3. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
@@ -77,13 +79,12 @@ paru -S --needed --noconfirm \
     gvfs \
     tumbler \
     ffmpegthumbnailer \
-    yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp\
+    yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
     file-roller \
     polybar \
-    i3lock-color \
     networkmanager-dmenu-git \
     catppuccin-gtk-theme-macchiato papirus-icon-theme lxappearance \
-    btop \
+    btop sxhkd \
     pavucontrol \
     pass xdotool keychain
 
@@ -98,93 +99,17 @@ sudo systemctl enable ly.service
 # Habilitar serviço do Bluetooth
 sudo systemctl enable --now bluetooth.service
 
-# Criar os diretórios padrões de configuração para evitar erros de inicialização
-echo -e "${BLUE}:: Criando diretórios padrão em ~/.config...${NC}"
-mkdir -p ~/.config/{i3,dmenu,polybar,dunst,alacritty,yazi}
+# Clona os arquivos de configuração do i3 e mais...
+echo -e "${BLUE}:: Clonando configuração i3wm para ~/.config...${NC}"
+git clone https://github.com/DSanches92/my-i3wm.git ~/.config
 
-# Configuração do dmenu
-if [ ! -f ~/.config/dmenu/dmenu-run.sh ]; then
-  cat > ~/.config/dmenu/dmenu-run.sh << 'SCRIPTEOF'
-#!/bin/bash
-
-# Configuração da Fonte
-FONTE="Geist Nerd Font-11"
-
-# Paleta Catppuccin Macchiato
-BACKGROUND="#24273a"  # Base
-TEXTO_NORMAL="#cad3f5" # Text
-SELECIONADO="#c6a0f6"  # Mauve
-TEXTO_SEL="#24273a"    # Base
-
-# Executa o dmenu original passando as configurações
-dmenu_run -fn "$FONTE" -nb "$BACKGROUND" -nf "$TEXTO_NORMAL" -sb "$SELECIONADO" -sf "$TEXTO_SEL" -i
-SCRIPTEOF
-fi
-
-# Configuração para Passmenu
-if [ ! -f ~/.config/dmenu/passmenu-run.sh ]; then
-  cat > ~/.config/dmenu/passmenu-run.sh << 'SCRIPTEOF'
-#!/bin/bash
-
-# Configuração da Fonte
-FONTE="Geist Nerd Font-12"
-
-# Paleta Catppuccin Macchiato
-BACKGROUND="#24273a"   # Base
-TEXTO_NORMAL="#cad3f5" # Text
-SELECIONADO="#c6a0f6"  # Mauve
-TEXTO_SEL="#24273a"    # Base
-
-# Argumentos visuais do dmenu encapsulados
-DMENU_ARGS="-fn $FONTE -nb $BACKGROUND -nf $TEXTO_NORMAL -sb $SELECIONADO -sf $TEXTO_SEL -i"
-
-# Executa o passmenu original injetando os nossos parâmetros visuais do dmenu
-passmenu --type $DMENU_ARGS
-SCRIPTEOF
-fi
-
-# Configuração controle de ociosidade
-if [ ! -f ~/.config/i3/anti-sleep.sh ]; then
-  cat > ~/.config/i3/anti-sleep.sh << 'SCRIPTEOF'
-#!/bin/bash
-
-# Script para impedir suspensão se houver áudio tocando (Pipewire/PulseAudio)
-while true; do
-  if pactl list sinks | grep -q "State: RUNNING"; then
-    xset s reset
-  fi
-
-  sleep 60
-done
-SCRIPTEOF
-fi
+# Configuração Ly Session Manager
+sudo cp ~/.config/ly/config.ini /etc/ly/config.ini
 
 # Permissão deexecução para os scripts
 chmod +x ~/.config/dmenu/dmenu-run.sh
 chmod +x ~/.config/dmenu/passmenu-run.sh
 chmod +x ~/.config/i3/anti-sleep.sh
-
-# Se não houver uma configuração padrão do i3, cria uma inicial para não dar tela preta
-if [ ! -f ~/.config/i3/config ]; then
-  cat > ~/.config/i3/config << 'EOF'
-exec --no-startup-id gnome-keyring-daemon --start --components=pkcs11,secrets,ssh
-exec --no-startup-id ~/.config/i3/anti-sleep.sh
-
-exec_always --no-startup-id picom -b
-exec_always --no-startup-id nm-applet
-exec_always --no-startup-id setxkbmap -layout br -model abnt2
-exec_always --no-startup-id /usr/lib/mate-polkit/polkit-mate-authentication-agent-1
-exec_always --no-startup-id dbus-update-activation-environment --systemd DISPLAY XAUTHORITY
-
-bindsym Mod4+q kill
-
-bindsym Mod4+Return exec alacritty
-bindsym Mod4+Shift+e exec --no-startup-id alacritty -e yazi
-bindsym Mod4+d exec --no-startup-id ~/.config/dmenu/dmenu-run.sh
-bindsym Mod4+p exec --no-startup-id ~/.config/dmenu/passmenu-run.sh
-bindsym Mod4+b exec firefox
-EOF
-fi
 
 #------------------------------------------------------------------------------#
 # 6. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
@@ -402,11 +327,8 @@ echo -e "     ${GREEN}sudo reboot${NC}"
 echo ""
 echo -e "  2. Quando fizer login na interface i3wm:"
 echo -e "     - Pressione ${BLUE}Super + Enter${NC} para abrir o seu novíssimo terminal ${GREEN}Alacritty${NC}."
-echo -e "     - Pressione ${BLUE}Super + D${NC} para abrir o inicializador ${GREEN}Rofi${NC}."
+echo -e "     - Pressione ${BLUE}Super + d${NC} para abrir o inicializador ${GREEN}DMenu${NC}."
 echo -e "     - No terminal, digite ${GREEN}thunar${NC} para o gerenciador gráfico ou ${GREEN}yazi${NC} para o terminal."
-echo ""
-echo -e "  3. Agora você está pronto para clonar e aplicar os arquivos de configuração"
-echo -e "     (dotfiles) do Keyitdev em ~/.config/i3 e ~/.config/polybar !"
 echo ""
 echo -e "  ${YELLOW}🎮 Jogos — Recursos Instalados:${NC}"
 echo -e "     ✓ Steam + Proton GE (padrão configurado via script)"
@@ -425,3 +347,8 @@ echo -e "        ${GREEN}~/.local/bin/steam-proton-default${NC}"
 echo -e "     5. Atualize o Proton GE quando quiser pelo ${GREEN}ProtonUp-Qt${NC}"
 echo -e "     6. Para eliminar tearing no i3wm com NVIDIA + Vulkan:"
 echo -e "        ${GREEN}gamescope -w 2560 -h 1440 -r <REFRESH> -- %command%${NC}"
+echo ""
+echo -e "${BLUE}:: REINICIANDO EM 10 SEGUNDOS... ${NC}"
+echo ""
+sleep 10
+reboot

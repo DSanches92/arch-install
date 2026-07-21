@@ -47,10 +47,10 @@ SUDO_PID=$!
 trap 'kill $SUDO_PID 2>/dev/null' EXIT
 
 echo -e "${BLUE}"
-echo "  ╔══════════════════════════════════════════════════════╗"
-echo "  ║       PÓS-INSTALAÇÃO ARCH + BTRFS                    ║"
-echo "  ║   Ryzen 5 3600 · RTX 2060 · NVMe · 16GB              ║"
-echo "  ╚══════════════════════════════════════════════════════╝"
+echo "  ╔══════════════════════════════════════════════════════════╗"
+echo "  ║             INSTALAÇÃO DO ARCH LINUX + BTRFS             ║"
+echo "  ║       Ryzen 5 3600 · RTX 2060 · NVMe 1TB · 16GB RAM      ║"
+echo "  ╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 echo ""
 
@@ -80,9 +80,9 @@ echo -e "${GREEN}:: [1/5] Concluído.${NC}"
 echo ""
 
 #------------------------------------------------------------------------------#
-#                   2. DRIVERS NVIDIA (RTX 2060 - TURING)                      #
+#                   2. DRIVERS NVIDIA (RTX 2060)                               #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/5] Instalando drivers NVIDIA (RTX 2060 / Turing)...${NC}"
+echo -e "${BLUE}:: [2/5] Instalando drivers NVIDIA RTX 2060...${NC}"
 echo ""
 
 # DKMS: compila o módulo aberto (Turing+) contra o linux-zen instalado
