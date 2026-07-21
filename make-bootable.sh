@@ -93,10 +93,26 @@ if [[ "$confirma" != "s" && "$confirma" != "sim" ]]; then
 fi
 
 #------------------------------------------------------------------------------#
-#                        GRAVAÇÃO COM DD                                      #
+#                        LIMPA O PENDRIVE                                      #
 #------------------------------------------------------------------------------#
 echo ""
-echo -e "${BLUE}:: [1/2] Gravando ISO no pendrive...${NC}"
+echo -e "${BLUE}:: [1/3] Formatação do pendrive...${NC}"
+echo -e "${YELLOW}  Desmontando partições existentes...${NC}"
+sudo umount {$DISK}* 2>/dev/null || true && echo -e "${GREEN}Partições desmontadas!${NC}"
+
+echo ""
+echo -e "${YELLOW}  Limpando assinaturas do disco...${NC}"
+sudo wipefs --all --force "$DISK" && echo -e "${GREEN}Assinaturas limpas!${NC}"
+
+echo ""
+echo -e "${YELLOW}  Zerando o início do dispositivo...${NC}"
+sudo dd if=/dev/zero of="$DISK" bs=1M count=10 status=progress conv=fsync && echo -e "${GREEN}Finalizado!${NC}"
+
+#------------------------------------------------------------------------------#
+#                        GRAVAÇÃO COM DD                                       #
+#------------------------------------------------------------------------------#
+echo ""
+echo -e "${BLUE}:: [2/3] Gravando ISO no pendrive...${NC}"
 echo -e "${YELLOW}  dd if=$ISO of=$DISK bs=4M oflag=sync status=progress conv=fsync${NC}"
 echo ""
 
@@ -109,7 +125,7 @@ echo -e "${GREEN}:: [OK] ISO gravada.${NC}"
 #                     CÓPIA DOS SCRIPTS PARA O PENDRIVE                        #
 #------------------------------------------------------------------------------#
 echo ""
-echo -e "${BLUE}:: [2/2] Copiando scripts de instalação para o pendrive...${NC}"
+echo -e "${BLUE}:: [3/3] Copiando scripts de instalação para o pendrive...${NC}"
 
 # Força o kernel a re-ler a tabela de partições
 echo -e "${YELLOW}:: Aguardando o sistema reconhecer as partições...${NC}"
