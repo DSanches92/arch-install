@@ -57,7 +57,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   1. SINCRONIZAÇÃO E ATUALIZAÇÃO COMPLETA                    #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/5] Sincronizando repositórios e atualizando o sistema...${NC}"
+echo -e "${BLUE}:: [1/6] Sincronizando repositórios e atualizando o sistema...${NC}"
 echo ""
 
 paru -Syyuu --noconfirm
@@ -76,13 +76,13 @@ paru -S --needed --noconfirm \
   noto-fonts-emoji
 
 echo ""
-echo -e "${GREEN}:: [1/5] Concluído.${NC}"
+echo -e "${GREEN}:: [1/6] Concluído.${NC}"
 echo ""
 
 #------------------------------------------------------------------------------#
 #                   2. DRIVERS NVIDIA (RTX 2060)                               #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/5] Instalando drivers NVIDIA RTX 2060...${NC}"
+echo -e "${BLUE}:: [2/6] Instalando drivers NVIDIA RTX 2060...${NC}"
 echo ""
 
 # DKMS: compila o módulo aberto (Turing+) contra o linux-zen instalado
@@ -157,13 +157,13 @@ echo -e "${YELLOW}:: Reconstruindo initramfs...${NC}"
 sudo mkinitcpio -P
 
 echo ""
-echo -e "${GREEN}:: [2/5] Concluído.${NC}"
+echo -e "${GREEN}:: [2/6] Concluído.${NC}"
 echo ""
 
 #------------------------------------------------------------------------------#
 #                   3. ÁUDIO (PIPEWIRE + WIREPLUMBER)                         #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/5] Instalando servidores de áudio, drivers de vídeo e codecs...${NC}"
+echo -e "${BLUE}:: [3/6] Instalando servidores de áudio, drivers de vídeo e codecs...${NC}"
 echo ""
 
 paru -S --needed --noconfirm \
@@ -201,13 +201,13 @@ echo -e "${YELLOW}:: Ativando serviços de áudio (usuário)...${NC}"
 systemctl --user enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
 echo ""
-echo -e "${GREEN}:: [3/5] Concluído.${NC}"
+echo -e "${GREEN}:: [3/6] Concluído.${NC}"
 echo ""
 
 #------------------------------------------------------------------------------#
 #                   4. OTIMIZAÇÕES DE DESEMPENHO                               #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [4/5] Aplicando otimizações de desempenho...${NC}"
+echo -e "${BLUE}:: [4/6] Aplicando otimizações de desempenho...${NC}"
 echo ""
 
 # --- Swappiness: reduz uso de swap (16GB RAM, uso apenas emergencial) ---
@@ -254,13 +254,39 @@ fi
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 echo ""
-echo -e "${GREEN}:: [4/5] Concluído.${NC}"
+echo -e "${GREEN}:: [4/6] Concluído.${NC}"
 echo ""
 
 #------------------------------------------------------------------------------#
-#                   5. LIMPEZA E VERIFICAÇÃO FINAL                             #
+#                   5. ZSH + OH MY ZSH                                         #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [5/5] Limpeza e verificação final...${NC}"
+echo -e "${BLUE}:: [5/6] Instalando ZSH e Oh My Zsh...${NC}"
+echo ""
+
+# Instala pacotes do Zsh e plugins
+paru -S --needed --noconfirm zsh zsh-completions
+
+# Instala o Oh My Zsh (sem parar o script)
+RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+# Baixa os plugins extras da comunidade
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+# Substitui o .zshrc padrão pelo .zshrc personalizado do repositório
+curl -fsSL https://raw.githubusercontent.com/DSanches92/my-i3wm/main/.zshrc -o ~/.zshrc
+
+# Define Zsh como padrão para o usuário
+sudo chsh -s "$(which zsh)" "$USER"
+
+echo ""
+echo -e "${GREEN}:: [5/6] Concluído.${NC}"
+echo ""
+
+#------------------------------------------------------------------------------#
+#                   6. LIMPEZA E VERIFICAÇÃO FINAL                             #
+#------------------------------------------------------------------------------#
+echo -e "${BLUE}:: [6/6] Limpeza e verificação final...${NC}"
 echo ""
 
 # Limpa cache do pacman (mantém apenas as 3 versões mais recentes)
@@ -278,29 +304,31 @@ for svc in NetworkManager irqbalance fstrim.timer; do
 done
 
 echo ""
-echo -e "${GREEN}:: [5/5] Concluído.${NC}"
+echo -e "${GREEN}:: [6/6] Concluído.${NC}"
 echo ""
 
 #------------------------------------------------------------------------------#
 #                              FINALIZAÇÃO                                     #
 #------------------------------------------------------------------------------#
 echo -e "${GREEN}"
-echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║   Pós-instalação concluída com sucesso!                  ║"
-echo "  ║                                                          ║"
-echo "  ║   Próximos passos:                                       ║"
-echo "  ║   1. Verifique as alterações e reinicie:                 ║"
-echo "  ║        sudo reboot                                       ║"
-echo "  ║                                                          ║"
-echo "  ║   2. Após reiniciar, execute o script Hyprland ou i3wm:  ║"
-echo "  ║        ./install-hyprland.sh                             ║"
-echo "  ║        ./install-i3wm.sh                                 ║"
-echo "  ║                                                          ║"
-echo "  ║   Configurações aplicadas:                               ║"
-echo "  ║   ✓ NVIDIA RTX 2060 (nvidia-open-dkms + DRM KMS)         ║"
-echo "  ║   ✓ PipeWire + WirePlumber + codecs                      ║"
-echo "  ║   ✓ swappiness=10 · vfs_cache_pressure=50                ║"
-echo "  ║   ✓ I/O scheduler: none (NVMe)                           ║"
-echo "  ║   ✓ irqbalance · fstrim · amd_pstate=active              ║"
-echo "  ╚══════════════════════════════════════════════════════════╝"
+echo "  ╔═══════════════════════════════════════════════════════════╗"
+echo "  ║   Pós-instalação concluída com sucesso!                   ║"
+echo "  ║                                                           ║"
+echo "  ║   Próximos passos:                                        ║"
+echo "  ║   1. Verifique as alterações e reinicie:                  ║"
+echo "  ║        sudo reboot                                        ║"
+echo "  ║                                                           ║"
+echo "  ║   2. Após reiniciar, execute o script Hyprland ou i3wm:   ║"
+echo "  ║        ./install-hyprland.sh                              ║"
+echo "  ║        ./install-i3wm.sh                                  ║"
+echo "  ║                                                           ║"
+echo "  ║   Configurações aplicadas:                                ║"
+echo "  ║     - NVIDIA RTX 2060 (nvidia-open-dkms + DRM KMS)        ║"
+echo "  ║     - PipeWire + WirePlumber + codecs                     ║"
+echo "  ║     - swappiness=10 · vfs_cache_pressure=50               ║"
+echo "  ║     - I/O scheduler: none (NVMe)                          ║"
+echo "  ║     - irqbalance · fstrim · amd_pstate=active             ║"
+echo "  ║     - ZSH + Oh My Zsh (plugins: autosuggestions,          ║"
+echo "  ║     syntax-highlighting)                                  ║"
+echo "  ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
