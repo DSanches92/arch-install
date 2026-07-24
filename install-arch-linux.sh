@@ -9,7 +9,6 @@
 
 set -euo pipefail
 
-# Cores para saída do terminal
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
@@ -37,8 +36,29 @@ TIMEZONE="America/Sao_Paulo"
 LOCALE="pt_BR.UTF-8"
 LOCALE_FALLBACK="en_US.UTF-8"
 KEYMAP="br-abnt2"
-USER_PASSWORD="12345"
-ROOT_PASSWORD="12345"
+USER_PASSWORD=""
+ROOT_PASSWORD=""
+
+#------------------------------------------------------------------------------#
+#                              FUNÇÕES AUXILIARES                              #
+#------------------------------------------------------------------------------#
+prompt_password() {
+  local label="$1" varname="$2" pass1 pass2
+  while true; do
+    read -rs -p "  Senha para $label: " pass1; echo
+    read -rs -p "  Confirme a senha para $label: " pass2; echo
+    if [[ -z "$pass1" ]]; then
+      echo -e "  ${RED}[ERRO] A senha não pode ser vazia.${NC}"
+      continue
+    fi
+    if [[ "$pass1" != "$pass2" ]]; then
+      echo -e "  ${RED}[ERRO] As senhas não coincidem. Tente novamente.${NC}"
+      continue
+    fi
+    printf -v "$varname" '%s' "$pass1"
+    break
+  done
+}
 
 #------------------------------------------------------------------------------#
 #                              DETECTAR AMBIENTE                               #
@@ -58,8 +78,7 @@ fi
 #------------------------------------------------------------------------------#
 if (( IN_CHROOT == 0 )); then
 
-  # Verifica se está em modo UEFI (obrigatório para este script)
-  echo -e "${BLUE}:: [1/8] Verificando ambiente UEFI...${NC}"
+  echo -e "${BLUE}:: [1/9] Verificando ambiente UEFI...${NC}"
   if [[ ! -d /sys/firmware/efi ]]; then
     echo -e ""
     echo -e "${RED}[ERRO] Sistema não foi inicializado em modo UEFI.${NC}"
@@ -70,13 +89,13 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${GREEN}:: [OK] Modo UEFI confirmado.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [2/8] Configurando teclado e relógio...${NC}"
+  echo -e "${BLUE}:: [2/9] Configurando teclado e relógio...${NC}"
   loadkeys "$KEYMAP"
   timedatectl set-ntp true
   echo -e "${GREEN}:: [OK] Teclado ($KEYMAP) e NTP configurados.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [3/8] Verificando conexão com a internet...${NC}"
+  echo -e "${BLUE}:: [3/9] Verificando conexão com a internet...${NC}"
   ping -c 4 archlinux.org >/dev/null || {
     echo -e "${RED}[ERRO] Sem conexão com a internet.${NC}"
     exit 1
@@ -84,12 +103,18 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${GREEN}:: [OK] Conexão com a internet estabelecida.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [4/8] Sincronizando repositórios...${NC}"
+  echo -e "${BLUE}:: [4/9] Sincronizando repositórios...${NC}"
+  if command -v reflector &>/dev/null; then
+    echo -e "${YELLOW}:: Otimizando mirrorlist com reflector (Brasil)...${NC}"
+    reflector --country Brazil --age 12 --protocol https --sort rate \
+      --save /etc/pacman.d/mirrorlist \
+      || echo -e "${YELLOW}:: reflector falhou, mantendo mirrorlist padrão.${NC}"
+  fi
   pacman -Syy --noconfirm
   echo -e "${GREEN}:: [OK] Repositórios sincronizados.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [5/8] Selecionando disco de instalação...${NC}"
+  echo -e "${BLUE}:: [5/9] Selecionando disco de instalação...${NC}"
   echo ""
   echo -e "${YELLOW}:: Discos disponíveis:${NC}"
   echo "  -------------------  "
@@ -133,7 +158,13 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${RED}:: ATENÇÃO: TODOS OS DADOS EM $DISK SERÃO APAGADOS!${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [6/8] Particionando, formatando e montando o disco...${NC}"
+  echo -e "${BLUE}:: [6/9] Definindo credenciais de acesso...${NC}"
+  prompt_password "root" ROOT_PASSWORD
+  prompt_password "usuário ($USERNAME)" USER_PASSWORD
+  echo -e "${GREEN}:: [OK] Credenciais definidas.${NC}"
+  echo ""
+
+  echo -e "${BLUE}:: [7/9] Particionando, formatando e montando o disco...${NC}"
   echo -e "${YELLOW}:: Apagando assinaturas de sistema de arquivos...${NC}"
   wipefs -a "$DISK"
 
@@ -145,8 +176,9 @@ size=600M, type=uefi, name=EFI
 type=linux, name=arch-root
 EOF
 
-  # Aguarda o kernel re-ler a tabela de partições
-  sleep 2
+  partprobe "$DISK" 2>/dev/null || true
+  udevadm settle
+  sleep 1
 
   if [[ "$DISK" =~ nvme || "$DISK" =~ mmcblk ]]; then
     PART="${DISK}p"
@@ -171,7 +203,7 @@ EOF
   btrfs subvolume create /mnt/@.snapshots
   umount /mnt
 
-  OPTS_GERAL="noatime,compress=zstd:3,space_cache=v2,discard=async,autodefrag,ssd,commit=30"
+  OPTS_GERAL="noatime,compress=zstd:3,space_cache=v2,discard=async,ssd,commit=30"
 
   echo -e "${YELLOW}:: Montando subvolumes...${NC}"
   mount -o $OPTS_GERAL,subvol=@ "$ROOT" /mnt
@@ -189,20 +221,27 @@ EOF
   echo -e "${YELLOW}:: Continuando em 5 segundos...${NC}"
   sleep 5
 
-  echo -e "${BLUE}:: [7/8] Instalando pacotes base (pacstrap)...${NC}"
+  echo -e "${BLUE}:: [8/9] Instalando pacotes base (pacstrap)...${NC}"
   pacstrap -K /mnt \
-    base base-devel \
+    base base-devel sudo \
     linux-zen linux-zen-headers linux-firmware \
     amd-ucode btrfs-progs \
     nano openssh git cargo
 
   echo ""
-  echo -e "${BLUE}:: [8/8] Gerando fstab e preparando chroot...${NC}"
+  echo -e "${BLUE}:: [9/9] Gerando fstab e preparando chroot...${NC}"
   echo -e "${YELLOW}:: Gerando fstab...${NC}"
   genfstab -U /mnt >> /mnt/etc/fstab
   sleep 10
 
   echo ""
+  echo -e "${YELLOW}:: Gravando credenciais temporárias para o chroot...${NC}"
+  cat > /mnt/root/.chroot-creds <<CREDS
+ROOT_PASSWORD='$ROOT_PASSWORD'
+USER_PASSWORD='$USER_PASSWORD'
+CREDS
+  chmod 600 /mnt/root/.chroot-creds
+
   echo -e "${YELLOW}:: Copiando script para o ambiente chroot...${NC}"
   cp "$0" /mnt/root/install-arch-linux.sh
   chmod +x /mnt/root/install-arch-linux.sh
@@ -237,14 +276,14 @@ if (( IN_CHROOT == 1 )); then
   sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
   locale-gen
 
-  echo "LANG=$LOCALE" >> /etc/locale.conf
-  echo "KEYMAP=$KEYMAP" >> /etc/vconsole.conf
+  echo "LANG=$LOCALE" > /etc/locale.conf
+  echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
   export LANG="$LOCALE"
   echo -e "${GREEN}:: [OK] TimeZone e localidade configurados.${NC}"
   echo ""
 
   echo -e "${BLUE}:: [2/7] Configurando hostname e hosts...${NC}"
-  echo "$HOSTNAME" >> /etc/hostname
+  echo "$HOSTNAME" > /etc/hostname
   cat > /etc/hosts <<EOF
 127.0.0.1    localhost
 ::1          localhost
@@ -267,10 +306,20 @@ EOF
   echo ""
 
   echo -e "${BLUE}:: [5/7] Configurando usuário e senhas...${NC}"
+  if [[ ! -f /root/.chroot-creds ]]; then
+    echo -e "${RED}[ERRO] Arquivo de credenciais não encontrado em /root/.chroot-creds.${NC}"
+    exit 1
+  fi
+
+  source /root/.chroot-creds
+  rm -f /root/.chroot-creds
+
   echo "root:$ROOT_PASSWORD" | chpasswd
   useradd -mG wheel "$USERNAME"
   usermod -aG storage,power,audio "$USERNAME"
+
   echo "$USERNAME:$USER_PASSWORD" | chpasswd
+  unset ROOT_PASSWORD USER_PASSWORD
   echo -e "${GREEN}:: [OK] Usuário '$USERNAME' criado e configurado.${NC}"
   echo ""
 
@@ -300,7 +349,7 @@ EOF
   echo -e "${BLUE}:: [7/7] Instalando Paru (AUR Helper)...${NC}"
   sudo -u "$USERNAME" git clone https://aur.archlinux.org/paru.git /tmp/paru
   cd /tmp/paru
-  sudo -u "$USERNAME" makepkg -c
+  sudo -u "$USERNAME" makepkg -sc --noconfirm
   pacman -U --noconfirm paru-*.pkg.tar.zst
   cd /tmp
   rm -rf /tmp/paru
