@@ -12,7 +12,6 @@
 
 set -euo pipefail
 
-# Cores para saída do terminal
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
@@ -41,7 +40,6 @@ fi
 echo -e "${GREEN}:: [OK] Privilégios sudo confirmados.${NC}"
 echo ""
 
-# Mantém o sudo vivo enquanto o script roda
 while true; do sudo -v; sleep 60; done &
 SUDO_PID=$!
 trap 'kill $SUDO_PID 2>/dev/null' EXIT
@@ -85,13 +83,18 @@ echo ""
 echo -e "${BLUE}:: [2/6] Instalando drivers NVIDIA RTX 2060...${NC}"
 echo ""
 
-# DKMS: compila o módulo aberto (Turing+) contra o linux-zen instalado
 paru -S --needed --noconfirm \
   nvidia-open-dkms \
   nvidia-utils \
   lib32-nvidia-utils \
   nvidia-settings \
   libva-nvidia-driver
+
+echo ""
+echo -e "${YELLOW}:: Bloqueando o driver nouveau (evita conflito com a NVIDIA)...${NC}"
+printf 'blacklist nouveau\noptions nouveau modeset=0\n' | \
+  sudo tee /etc/modprobe.d/blacklist-nouveau.conf >/dev/null
+echo -e "${GREEN}:: nouveau bloqueado via /etc/modprobe.d/blacklist-nouveau.conf${NC}"
 
 echo ""
 echo -e "${YELLOW}:: Configurando parâmetros no GRUB...${NC}"
@@ -163,7 +166,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   3. ÁUDIO (PIPEWIRE + WIREPLUMBER)                         #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/6] Instalando servidores de áudio, drivers de vídeo e codecs...${NC}"
+echo -e "${BLUE}:: [3/6] Instalando servidores de áudio e codecs...${NC}"
 echo ""
 
 paru -S --needed --noconfirm \
@@ -181,10 +184,7 @@ paru -S --needed --noconfirm \
   ffmpeg \
   ffmpegthumbnailer \
   libdvdcss \
-  libva-mesa-driver \
-  mesa-utils \
   vulkan-icd-loader \
-  lib32-mesa-utils \
   lib32-vulkan-icd-loader \
   speech-dispatcher \
   a52dec \
@@ -210,15 +210,12 @@ echo ""
 echo -e "${BLUE}:: [4/6] Aplicando otimizações de desempenho...${NC}"
 echo ""
 
-# --- Swappiness: reduz uso de swap (16GB RAM, uso apenas emergencial) ---
 echo -e "${YELLOW}:: Ajustando swappiness para 10...${NC}"
 echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swappiness.conf >/dev/null
 
-# --- Cache de inode/dentry: mantém por mais tempo ---
 echo -e "${YELLOW}:: Ajustando vfs_cache_pressure para 50...${NC}"
 echo "vm.vfs_cache_pressure=50" | sudo tee -a /etc/sysctl.d/99-swappiness.conf >/dev/null
 
-# --- Agendador de E/S: kyber ou none para NVMe ---
 echo -e "${YELLOW}:: Configurando agendador de I/O para NVMe...${NC}"
 for DEV in /sys/block/nvme*/queue/scheduler; do
   if [[ -w "$DEV" ]]; then
@@ -226,19 +223,15 @@ for DEV in /sys/block/nvme*/queue/scheduler; do
   fi
 done
 
-# --- Persiste agendador via udev ---
 echo 'ACTION=="add|change", KERNEL=="nvme*", ATTR{queue/scheduler}="none"' | \
   sudo tee /etc/udev/rules.d/60-iosched-nvme.rules >/dev/null
 
-# --- irqbalance: distribui interrupções entre CPUs ---
 echo -e "${YELLOW}:: Ativando irqbalance...${NC}"
 sudo systemctl enable --now irqbalance 2>/dev/null || true
 
-# --- fstrim: já habilitado no instalador base, mas garantimos ---
 echo -e "${YELLOW}:: Verificando fstrim.timer...${NC}"
 sudo systemctl enable --now fstrim.timer 2>/dev/null || true
 
-# --- AMD P-state driver (Ryzen 5 3600) ---
 echo -e "${YELLOW}:: Habilitando AMD P-State na linha de comando do kernel...${NC}"
 if ! grep -q "amd_pstate=active" "$GRUB_FILE" 2>/dev/null; then
   CURRENT_LINE=$(grep "^GRUB_CMDLINE_LINUX_DEFAULT=" "$GRUB_FILE" | head -n1)
@@ -263,21 +256,21 @@ echo ""
 echo -e "${BLUE}:: [5/6] Instalando ZSH e Oh My Zsh...${NC}"
 echo ""
 
-# Instala pacotes do Zsh e plugins
 paru -S --needed --noconfirm zsh zsh-completions
 
-# Instala o Oh My Zsh (sem parar o script)
 RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-# Baixa os plugins extras da comunidade
-git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+ZSH_CUSTOM_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+[[ -d "$ZSH_CUSTOM_DIR/plugins/zsh-autosuggestions" ]] || \
+  git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions \
+    "$ZSH_CUSTOM_DIR/plugins/zsh-autosuggestions"
+[[ -d "$ZSH_CUSTOM_DIR/plugins/zsh-syntax-highlighting" ]] || \
+  git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+    "$ZSH_CUSTOM_DIR/plugins/zsh-syntax-highlighting"
 
-# Substitui o .zshrc padrão pelo .zshrc personalizado do repositório
 curl -fsSL https://raw.githubusercontent.com/DSanches92/my-i3wm/main/.zshrc -o ~/.zshrc
 
-# Define Zsh como padrão para o usuário
-sudo chsh -s "$(which zsh)" "$USER"
+sudo chsh -s "$(which zsh)" "$USERNAME"
 
 echo ""
 echo -e "${GREEN}:: [5/6] Concluído.${NC}"
@@ -289,11 +282,17 @@ echo ""
 echo -e "${BLUE}:: [6/6] Limpeza e verificação final...${NC}"
 echo ""
 
-# Limpa cache do pacman (mantém apenas as 3 versões mais recentes)
 echo -e "${YELLOW}:: Limpando cache do pacman...${NC}"
 sudo paccache -rk3 2>/dev/null || true
 
-# Verifica integridade dos serviços críticos
+echo -e "${YELLOW}:: Removendo pacotes órfãos (se houver)...${NC}"
+ORPHANS="$(pacman -Qtdq 2>/dev/null || true)"
+if [[ -n "$ORPHANS" ]]; then
+  sudo pacman -Rns --noconfirm $ORPHANS
+else
+  echo -e "    Nenhum pacote órfão encontrado."
+fi
+
 echo -e "${YELLOW}:: Verificando status dos serviços...${NC}"
 for svc in NetworkManager irqbalance fstrim.timer; do
   if systemctl is-enabled "$svc" &>/dev/null; then
@@ -318,12 +317,12 @@ echo "  ║   Próximos passos:                                        ║"
 echo "  ║   1. Verifique as alterações e reinicie:                  ║"
 echo "  ║        sudo reboot                                        ║"
 echo "  ║                                                           ║"
-echo "  ║   2. Após reiniciar, execute o script Hyprland ou i3wm:   ║"
-echo "  ║        ./install-hyprland.sh                              ║"
+echo "  ║   2. Após reiniciar, execute:                             ║"
 echo "  ║        ./install-i3wm.sh                                  ║"
 echo "  ║                                                           ║"
 echo "  ║   Configurações aplicadas:                                ║"
 echo "  ║     - NVIDIA RTX 2060 (nvidia-open-dkms + DRM KMS)        ║"
+echo "  ║       nouveau bloqueado via modprobe.d                    ║"
 echo "  ║     - PipeWire + WirePlumber + codecs                     ║"
 echo "  ║     - swappiness=10 · vfs_cache_pressure=50               ║"
 echo "  ║     - I/O scheduler: none (NVMe)                          ║"
