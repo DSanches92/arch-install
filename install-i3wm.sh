@@ -3,7 +3,7 @@
 # Script de Instalação do Ambiente Gráfico i3wm
 # Customizado para: Danilo (Arch Linux + Zen Kernel)
 #
-# Terminal: Alacritty | Gerenciador de Arquivos: Thunar & Yazi
+# Terminal: Alacritty | FM: Thunar & Yazi | Barra: Polybar | Launcher: dmenu
 #
 
 set -euo pipefail
@@ -39,57 +39,35 @@ fi
 #------------------------------------------------------------------------------#
 # 2. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/4] Instalando i3wm e pacotes gráficos essenciais...${NC}"
+echo -e "${BLUE}:: [1/4] Instalando Xorg + i3wm + utilitários gráficos...${NC}"
 paru -S --needed --noconfirm \
     xorg-server xorg-xinit xorg-xauth xorg-xrandr \
     xorg-xset xorg-xprop xorg-xev xclip \
     xf86-input-libinput \
     i3-wm i3status i3lock-color \
-    ly \
-    dmenu \
-    picom \
-    dunst \
-    feh \
-    xss-lock \
-    xclip \
-    mate-polkit \
-    network-manager-applet \
-    bluez \
-    bluez-utils \
-    blueman \
-    zed-git
+    ly dmenu picom dunst feh xss-lock \
+    mate-polkit network-manager-applet \
+    bluez bluez-utils blueman
 
 #------------------------------------------------------------------------------#
 # 3. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [2/4] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
-    alacritty \
-    firefox \
-    thunar \
-    thunar-volman \
-    thunar-archive-plugin \
-    thunar-media-tags-plugin \
-    gvfs \
-    tumbler \
-    ffmpegthumbnailer \
+    alacritty firefox thunar thunar-volman thunar-archive-plugin \
+    thunar-media-tags-plugin gvfs tumbler ffmpegthumbnailer \
     yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
-    file-roller \
-    polybar \
-    networkmanager-dmenu-git \
+    file-roller polybar networkmanager-dmenu-git \
     catppuccin-gtk-theme-macchiato papirus-icon-theme lxappearance \
-    btop sxhkd \
-    pavucontrol \
-    pass xdotool keychain
+    btop sxhkd pavucontrol pass xdotool keychain \
+    pamixer playerctl flameshot greenclip
 
 #------------------------------------------------------------------------------#
 # 4. SERVIÇOS DE SISTEMA E DOTFILES
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [3/4] Habilitando serviços do sistema (Ly e Bluetooth)...${NC}"
-
 sudo systemctl enable ly.service
 sudo systemctl set-default graphical.target
-
 sudo systemctl enable --now bluetooth.service
 
 echo -e "${BLUE}:: Clonando configuração i3wm para ~/.config...${NC}"
@@ -100,11 +78,11 @@ mkdir -p ~/.config
 cp -rT "$DOTFILES_TMP" ~/.config
 rm -rf "$DOTFILES_TMP"
 
-sudo cp ~/.config/ly/config.ini /etc/ly/config.ini
+sudo cp -f ~/.config/ly/config.ini /etc/ly/config.ini 2>/dev/null || true
 
-chmod +x ~/.config/dmenu/dmenu-run.sh
-chmod +x ~/.config/dmenu/passmenu-run.sh
-chmod +x ~/.config/i3/anti-sleep.sh
+chmod +x ~/.config/dmenu/dmenu-run.sh 2>/dev/null || true
+chmod +x ~/.config/dmenu/passmenu-run.sh 2>/dev/null || true
+chmod +x ~/.config/i3/anti-sleep.sh 2>/dev/null || true
 
 #------------------------------------------------------------------------------#
 # 5. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
@@ -117,22 +95,14 @@ fi
 
 echo -e "${GREEN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║   Instalação concluída com sucesso!                      ║"
+echo "  ║   Instalação gráfica concluída!                          ║"
 echo "  ╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 echo -e "  ${YELLOW}Próximos Passos:${NC}"
-echo -e "  1. Reinicie o sistema para subir a tela de login (Ly):"
-echo -e "     ${GREEN}sudo reboot${NC}"
-echo ""
-echo -e "  2. Quando fizer login na interface i3wm:"
-echo -e "     - Pressione ${BLUE}Super + Enter${NC} para abrir o seu novíssimo terminal ${GREEN}Alacritty${NC}."
-echo -e "     - Pressione ${BLUE}Super + d${NC} para abrir o inicializador ${GREEN}DMenu${NC}."
-echo -e "     - No terminal, digite ${GREEN}thunar${NC} para o gerenciador gráfico ou ${GREEN}yazi${NC} para o terminal."
-echo ""
-echo -e "  ${YELLOW}Opcional — Jogos:${NC}"
-echo -e "     Steam, Proton GE, Gamemode, MangoHud e o launcher do Ark foram"
-echo -e "     movidos para um script separado. Se quiser esse stack, rode:"
-echo -e "     ${GREEN}./install-gaming.sh${NC}"
+echo -e "  1. ${GREEN}sudo reboot${NC}"
+echo -e "  2. Login i3 → Super+Enter (Alacritty) | Super+d (dmenu)"
+echo -e "  3. Controle de volume já mapeada"
+echo -e "  4. Opcional jogos: ${GREEN}./install-gaming.sh${NC}"
 echo ""
 echo -e "${BLUE}:: REINICIANDO EM 10 SEGUNDOS... ${NC}"
 echo ""
