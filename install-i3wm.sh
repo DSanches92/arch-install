@@ -39,7 +39,7 @@ fi
 #------------------------------------------------------------------------------#
 # 2. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/4] Instalando Xorg + i3wm + utilitários gráficos...${NC}"
+echo -e "${BLUE}:: [1/5] Instalando Xorg + i3wm + utilitários gráficos...${NC}"
 paru -S --needed --noconfirm \
     xorg-server xorg-xinit xorg-xauth xorg-xrandr \
     xorg-xset xorg-xprop xorg-xev xclip \
@@ -52,7 +52,7 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 # 3. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/4] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
+echo -e "${BLUE}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
     alacritty firefox thunar thunar-volman thunar-archive-plugin \
     thunar-media-tags-plugin gvfs tumbler ffmpegthumbnailer \
@@ -65,7 +65,7 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 # 4. SERVIÇOS DE SISTEMA E DOTFILES
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/4] Habilitando serviços do sistema (Ly e Bluetooth)...${NC}"
+echo -e "${BLUE}:: [3/5] Habilitando serviços do sistema (Ly e Bluetooth)...${NC}"
 sudo systemctl enable ly.service
 sudo systemctl set-default graphical.target
 sudo systemctl enable --now bluetooth.service
@@ -87,11 +87,17 @@ chmod +x ~/.config/i3/anti-sleep.sh 2>/dev/null || true
 #------------------------------------------------------------------------------#
 # 5. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [4/4] Definindo o Alacritty como terminal padrão...${NC}"
+echo -e "${BLUE}:: [4/5] Definindo o Alacritty como terminal padrão...${NC}"
 export TERMINAL=alacritty
 if ! grep -q '^export TERMINAL=alacritty$' ~/.zshrc 2>/dev/null; then
   echo "export TERMINAL=alacritty" >> ~/.zshrc
 fi
+
+#------------------------------------------------------------------------------#
+# 6. SETA TECLADO BR ABNT2
+#------------------------------------------------------------------------------#
+echo -e "${BLUE}:: [5/5] Definindo o Teclado br abnt2...${NC}"
+sudo localectl set-x11-keymap br abnt2
 
 echo -e "${GREEN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
