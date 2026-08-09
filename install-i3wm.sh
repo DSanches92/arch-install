@@ -44,7 +44,7 @@ paru -S --needed --noconfirm \
     xorg-server xorg-xinit xorg-xauth xorg-xrandr \
     xorg-xset xorg-xprop xorg-xev xclip \
     xf86-input-libinput \
-    i3-wm i3blocks i3status i3lock-color  \
+    i3-wm i3blocks i3lock-color i3status  \
     ly dmenu picom dunst feh xss-lock \
     mate-polkit network-manager-applet \
     bluez bluez-utils blueman
@@ -55,12 +55,12 @@ paru -S --needed --noconfirm \
 echo -e "${BLUE}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
     alacritty firefox thunar thunar-volman thunar-archive-plugin \
-    thunar-media-tags-plugin gvfs tumbler ffmpegthumbnailer \
-    yazi ffmpeg 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
+    thunar-media-tags-plugin gvfs tumbler ffmpegthumbnailer xdg-user-dirs xdg-utils \
+    yazi ffmpeg 7zip unrar unzip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
     file-roller polybar networkmanager-dmenu-git \
     catppuccin-gtk-theme-macchiato papirus-icon-theme lxappearance \
     btop sxhkd pavucontrol pass xdotool keychain \
-    pamixer playerctl flameshot greenclip
+    meld pamixer playerctl flameshot greenclip
 
 #------------------------------------------------------------------------------#
 # 4. SERVIÇOS DE SISTEMA E DOTFILES

@@ -225,7 +225,7 @@ EOF
   pacstrap -K /mnt \
     base base-devel sudo \
     linux-zen linux-zen-headers linux-firmware \
-    amd-ucode btrfs-progs \
+    amd-ucode btrfs-progs exfatprogs \
     nano openssh git cargo
 
   echo ""

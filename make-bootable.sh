@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Cria um pendrive bootável com dd e copia os scripts de instalação
-# Uso: ./make-bootable.sh <dispositivo> <arquivo.iso>
+# Uso: ./make-bootable.sh <dispositivo> <arquivo.iso> [--no-scripts]
 # Ex.: ./make-bootable.sh /dev/sdb ~/Downloads/archlinux-2026.iso
 #
 
@@ -30,18 +30,31 @@ echo -e "${NC}"
 #------------------------------------------------------------------------------#
 #                         VALIDAÇÃO DOS ARGUMENTOS                              #
 #------------------------------------------------------------------------------#
-if [[ $# -ne 2 ]]; then
+COPY_SCRIPTS=true
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
     echo -e "${RED}[ERRO] Número de argumentos inválido.${NC}"
-    echo -e "${YELLOW}Uso:${NC} $0 ${GREEN}<dispositivo> <arquivo.iso>${NC}"
+    echo -e "${YELLOW}Uso:${NC} $0 ${GREEN}<dispositivo> <arquivo.iso> [--no-scripts]${NC}"
     echo ""
     echo "  Exemplos:"
     echo "    $0 /dev/sdb ~/Downloads/archlinux.iso"
     echo "    $0 /dev/sdc ~/Downloads/ubuntu.iso"
+    echo "    $0 /dev/sdb ~/Downloads/archlinux.iso --no-scripts"
     exit 1
 fi
 
 DISK="$1"
 ISO="$2"
+
+if [[ $# -eq 3 ]]; then
+    if [[ "$3" == "--no-scripts" ]]; then
+        COPY_SCRIPTS=false
+    else
+        echo -e "${RED}[ERRO] Terceiro argumento inválido: '$3'${NC}"
+        echo -e "${YELLOW}Uso:${NC} $0 ${GREEN}<dispositivo> <arquivo.iso> [--no-scripts]${NC}"
+        exit 1
+    fi
+fi
 
 # Valida se o dispositivo existe
 if [[ ! -b "$DISK" ]]; then
@@ -125,6 +138,9 @@ echo -e "${GREEN}:: [OK] ISO gravada.${NC}"
 #                     CÓPIA DOS SCRIPTS PARA O PENDRIVE                        #
 #------------------------------------------------------------------------------#
 echo ""
+if [[ "$COPY_SCRIPTS" == false ]]; then
+    echo -e "${BLUE}:: [3/3] Cópia dos scripts desativada (--no-scripts). Pulando etapa.${NC}"
+else
 echo -e "${BLUE}:: [3/3] Copiando scripts de instalação para o pendrive...${NC}"
 
 # Força o kernel a re-ler a tabela de partições
@@ -240,6 +256,7 @@ else
 
     rm -rf "$MOUNT_POINT"
 fi
+fi
 
 #------------------------------------------------------------------------------#
 #                           EJEÇÃO DO DISPOSITIVO                              #
@@ -264,9 +281,11 @@ echo -e "  ISO:         ${GREEN}$ISO${NC}"
 echo ""
 echo -e "  ${YELLOW}Pronto! O pendrive pode ser removido com segurança.${NC}"
 echo ""
+if [[ "$COPY_SCRIPTS" == true ]]; then
 echo -e "  ${YELLOW}📌 Ao bootar o Arch Live, monte a partição EFI para acessar os scripts:${NC}"
 echo -e "     ${GREEN}lsblk${NC}                             # Descubra o dispositivo (ex: sda, sdb)"
 echo -e "     ${GREEN}sudo mount /dev/sdX2 /mnt${NC}         # Monte a partição VFAT (troque X pelo letra)"
 echo -e "     ${GREEN}ls /mnt/${NC}                          # Scripts estarão aqui"
 echo -e "     ${GREEN}cp /mnt/install-arch-linux.sh ./${NC}  # Mova o script para a raiz do Arch Live"
 echo -e "     ${GREEN}./install-arch-linux.sh${NC}           # Inicie o script para instalação automatizada"
+fi

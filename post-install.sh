@@ -63,15 +63,9 @@ paru -Syyuu --noconfirm
 echo ""
 echo -e "${YELLOW}:: Instalando pacotes complementares e Fonts...${NC}"
 paru -S --needed --noconfirm \
-  python \
-  rsync \
-  fastfetch \
-  ttf-iosevka-nerd \
-  ttf-roboto-mono \
-  ttf-opensans \
-  ttf-hack-nerd \
-  otf-geist-mono-nerd \
-  noto-fonts-emoji
+  smartmontools python rsync fastfetch reflector github-cli \
+  ttf-iosevka-nerd ttf-roboto-mono ttf-opensans ttf-hack-nerd \
+  otf-geist-mono-nerd noto-fonts-emoji awesome-terminal-fonts
 
 echo ""
 echo -e "${GREEN}:: [1/6] Concluído.${NC}"
@@ -198,7 +192,7 @@ paru -S --needed --noconfirm \
 
 echo ""
 echo -e "${YELLOW}:: Ativando serviços de áudio (usuário)...${NC}"
-systemctl --user enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
+systemctl --user enable pipewire pipewire-pulse wireplumber
 
 echo ""
 echo -e "${GREEN}:: [3/6] Concluído.${NC}"
@@ -209,6 +203,10 @@ echo ""
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [4/6] Aplicando otimizações de desempenho...${NC}"
 echo ""
+
+echo -e "${YELLOW}:: Instalando e Ativando cpupower...${NC}"
+paru -S --needed --noconfirm cpupower
+sudo systemctl enable --now cpupower
 
 echo -e "${YELLOW}:: Ajustando swappiness para 10...${NC}"
 echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swappiness.conf >/dev/null
@@ -227,10 +225,10 @@ echo 'ACTION=="add|change", KERNEL=="nvme*", ATTR{queue/scheduler}="none"' | \
   sudo tee /etc/udev/rules.d/60-iosched-nvme.rules >/dev/null
 
 echo -e "${YELLOW}:: Ativando irqbalance...${NC}"
-sudo systemctl enable --now irqbalance 2>/dev/null || true
+sudo systemctl enable --now irqbalance
 
 echo -e "${YELLOW}:: Verificando fstrim.timer...${NC}"
-sudo systemctl enable --now fstrim.timer 2>/dev/null || true
+sudo systemctl enable --now fstrim.timer
 
 echo -e "${YELLOW}:: Habilitando AMD P-State na linha de comando do kernel...${NC}"
 if ! grep -q "amd_pstate=active" "$GRUB_FILE" 2>/dev/null; then
@@ -282,8 +280,12 @@ echo ""
 echo -e "${BLUE}:: [6/6] Limpeza e verificação final...${NC}"
 echo ""
 
+echo -e "${YELLOW}:: Instalando utilitários de manutenção...${NC}"
+paru -S --needed --noconfirm rebuild-detector pkgfile pacman-contrib
+sudo pkgfile --update
+
 echo -e "${YELLOW}:: Limpando cache do pacman...${NC}"
-sudo paccache -rk3 2>/dev/null || true
+sudo paccache -rk3
 
 echo -e "${YELLOW}:: Removendo pacotes órfãos (se houver)...${NC}"
 ORPHANS="$(pacman -Qtdq 2>/dev/null || true)"
