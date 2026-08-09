@@ -22,7 +22,7 @@ echo "  ╚═══════════════════════
 echo -e "${NC}"
 
 #------------------------------------------------------------------------------#
-# 1. VERIFICAÇÕES INICIAIS
+# -- VERIFICAÇÕES INICIAIS
 #------------------------------------------------------------------------------#
 if [[ $EUID -eq 0 ]]; then
     echo -e "${RED}[ERRO] Não execute este script como root/sudo diretamente.${NC}"
@@ -37,7 +37,7 @@ if ! command -v paru &> /dev/null; then
 fi
 
 #------------------------------------------------------------------------------#
-# 2. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA
+# 1. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [1/5] Instalando Xorg + i3wm + utilitários gráficos...${NC}"
 paru -S --needed --noconfirm \
@@ -45,12 +45,13 @@ paru -S --needed --noconfirm \
     xorg-xset xorg-xprop xorg-xev xclip \
     xf86-input-libinput \
     i3-wm i3blocks i3lock-color i3status  \
-    ly dmenu picom dunst feh xss-lock \
+    lightdm lightdm-gtk-greeter lightdm-gtk-greeter-settings \
+    dmenu picom dunst feh xss-lock \
     mate-polkit network-manager-applet \
     bluez bluez-utils blueman
 
 #------------------------------------------------------------------------------#
-# 3. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
+# 2. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
@@ -63,11 +64,11 @@ paru -S --needed --noconfirm \
     meld pamixer playerctl flameshot greenclip
 
 #------------------------------------------------------------------------------#
-# 4. SERVIÇOS DE SISTEMA E DOTFILES
+# 3. SERVIÇOS DE SISTEMA E DOTFILES
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/5] Habilitando serviços do sistema (Ly e Bluetooth)...${NC}"
-sudo systemctl enable ly.service
-sudo systemctl set-default graphical.target
+echo -e "${BLUE}:: [3/5] Habilitando serviços do sistema (LightDM e Bluetooth)...${NC}"
+sudo systemctl enable lightdm.service
+#sudo systemctl set-default graphical.target
 sudo systemctl enable --now bluetooth.service
 
 echo -e "${BLUE}:: Clonando configuração i3wm para ~/.config...${NC}"
@@ -78,14 +79,13 @@ mkdir -p ~/.config
 cp -rT "$DOTFILES_TMP" ~/.config
 rm -rf "$DOTFILES_TMP"
 
-sudo cp -f ~/.config/ly/config.ini /etc/ly/config.ini
-
-chmod +x ~/.config/dmenu/dmenu-run.sh
-chmod +x ~/.config/dmenu/passmenu-run.sh
-chmod +x ~/.config/i3/anti-sleep.sh
+echo -e "${YELLOW}:: Aplicando config do greeter...${NC}"
+sudo cp -f ~/.config/lightdm/lightdm.conf /etc/lightdm/lightdm.conf
+sudo cp -f ~/.config/lightdm/lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter.conf
+sudo cp ~/.config/i3/wallpaper_02.png /usr/share/pixmaps/wallpaper_02.png
 
 #------------------------------------------------------------------------------#
-# 5. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
+# 4. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [4/5] Definindo o Alacritty como terminal padrão...${NC}"
 export TERMINAL=alacritty
@@ -94,7 +94,7 @@ if ! grep -q '^export TERMINAL=alacritty$' ~/.zshrc 2>/dev/null; then
 fi
 
 #------------------------------------------------------------------------------#
-# 6. SETA TECLADO BR ABNT2
+# 5. SETA TECLADO BR ABNT2
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [5/5] Definindo o Teclado br abnt2...${NC}"
 sudo localectl set-x11-keymap br abnt2
