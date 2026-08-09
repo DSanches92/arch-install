@@ -55,8 +55,8 @@ paru -S --needed --noconfirm \
 echo -e "${BLUE}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
     alacritty firefox thunar thunar-volman thunar-archive-plugin \
-    thunar-media-tags-plugin gvfs tumbler ffmpegthumbnailer xdg-user-dirs xdg-utils \
-    yazi ffmpeg 7zip unrar unzip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
+    thunar-media-tags-plugin gvfs tumbler xdg-user-dirs xdg-utils \
+    yazi 7zip unrar unzip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
     file-roller polybar networkmanager-dmenu-git \
     catppuccin-gtk-theme-macchiato papirus-icon-theme lxappearance \
     btop sxhkd pavucontrol pass xdotool keychain \
@@ -78,11 +78,11 @@ mkdir -p ~/.config
 cp -rT "$DOTFILES_TMP" ~/.config
 rm -rf "$DOTFILES_TMP"
 
-sudo cp -f ~/.config/ly/config.ini /etc/ly/config.ini 2>/dev/null || true
+sudo cp -f ~/.config/ly/config.ini /etc/ly/config.ini
 
-chmod +x ~/.config/dmenu/dmenu-run.sh 2>/dev/null || true
-chmod +x ~/.config/dmenu/passmenu-run.sh 2>/dev/null || true
-chmod +x ~/.config/i3/anti-sleep.sh 2>/dev/null || true
+chmod +x ~/.config/dmenu/dmenu-run.sh
+chmod +x ~/.config/dmenu/passmenu-run.sh
+chmod +x ~/.config/i3/anti-sleep.sh
 
 #------------------------------------------------------------------------------#
 # 5. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA

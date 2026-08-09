@@ -107,8 +107,7 @@ if (( IN_CHROOT == 0 )); then
   if command -v reflector &>/dev/null; then
     echo -e "${YELLOW}:: Otimizando mirrorlist com reflector (Brasil)...${NC}"
     reflector --country Brazil --age 12 --protocol https --sort rate \
-      --save /etc/pacman.d/mirrorlist \
-      || echo -e "${YELLOW}:: reflector falhou, mantendo mirrorlist padrão.${NC}"
+      --save /etc/pacman.d/mirrorlist
   fi
   pacman -Syy --noconfirm
   echo -e "${GREEN}:: [OK] Repositórios sincronizados.${NC}"
@@ -176,7 +175,11 @@ size=600M, type=uefi, name=EFI
 type=linux, name=arch-root
 EOF
 
-  partprobe "$DISK" 2>/dev/null || true
+  # Exceção intencional: partprobe pode retornar erro mesmo quando a tabela
+  # já foi relida (falso-negativo comum). Mantido não-fatal porque, se a
+  # partição realmente não existir, mkswap/mkfs.fat/mkfs.btrfs abaixo vão
+  # falhar de forma explícita mesmo assim.
+  partprobe "$DISK" || true
   udevadm settle
   sleep 1
 
