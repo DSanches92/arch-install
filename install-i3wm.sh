@@ -44,7 +44,7 @@ paru -S --needed --noconfirm \
     xorg-server xorg-xinit xorg-xauth xorg-xrandr \
     xorg-xset xorg-xprop xorg-xev xclip \
     xf86-input-libinput \
-    i3-wm i3status i3lock-color \
+    i3-wm i3blocks i3status i3lock-color  \
     ly dmenu picom dunst feh xss-lock \
     mate-polkit network-manager-applet \
     bluez bluez-utils blueman
