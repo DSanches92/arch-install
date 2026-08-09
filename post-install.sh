@@ -78,11 +78,7 @@ echo -e "${BLUE}:: [2/6] Instalando drivers NVIDIA RTX 2060...${NC}"
 echo ""
 
 paru -S --needed --noconfirm \
-  nvidia-open-dkms \
-  nvidia-utils \
-  lib32-nvidia-utils \
-  nvidia-settings \
-  libva-nvidia-driver
+  nvidia-open-dkms nvidia-utils lib32-nvidia-utils nvidia-settings libva-nvidia-driver
 
 echo ""
 echo -e "${YELLOW}:: Bloqueando o driver nouveau (evita conflito com a NVIDIA)...${NC}"
@@ -164,31 +160,10 @@ echo -e "${BLUE}:: [3/6] Instalando servidores de áudio e codecs...${NC}"
 echo ""
 
 paru -S --needed --noconfirm \
-  pipewire \
-  pipewire-alsa \
-  pipewire-jack \
-  pipewire-pulse \
-  wireplumber \
-  gstreamer \
-  gst-libav \
-  gst-plugins-base \
-  gst-plugins-good \
-  gst-plugins-bad \
-  gst-plugins-ugly \
-  ffmpeg \
-  ffmpegthumbnailer \
-  libdvdcss \
-  vulkan-icd-loader \
-  lib32-vulkan-icd-loader \
-  speech-dispatcher \
-  a52dec \
-  faac \
-  faad2 \
-  flac \
-  lame \
-  x264 \
-  x265 \
-  xvidcore
+  pipewire pipewire-alsa pipewire-jack pipewire-pulse wireplumber \
+  gstreamer gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly \
+  ffmpeg ffmpegthumbnailer libdvdcss vulkan-icd-loader lib32-vulkan-icd-loader speech-dispatcher \
+  a52dec faac faad2 flac lame x264 x265 xvidcore
 
 echo ""
 echo -e "${YELLOW}:: Ativando serviços de áudio (usuário)...${NC}"
@@ -213,6 +188,11 @@ echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swappiness.conf >/dev/null
 
 echo -e "${YELLOW}:: Ajustando vfs_cache_pressure para 50...${NC}"
 echo "vm.vfs_cache_pressure=50" | sudo tee -a /etc/sysctl.d/99-swappiness.conf >/dev/null
+
+echo -e "${YELLOW}:: Aumentando limites de inotify (evita ENOSPC em dev servers JS/TS)...${NC}"
+echo "fs.inotify.max_user_watches=524288" | sudo tee /etc/sysctl.d/99-inotify.conf >/dev/null
+echo "fs.inotify.max_user_instances=512" | sudo tee -a /etc/sysctl.d/99-inotify.conf >/dev/null
+sudo sysctl --system >/dev/null
 
 echo -e "${YELLOW}:: Configurando agendador de I/O para NVMe...${NC}"
 for DEV in /sys/block/nvme*/queue/scheduler; do
@@ -266,8 +246,6 @@ ZSH_CUSTOM_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
   git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
     "$ZSH_CUSTOM_DIR/plugins/zsh-syntax-highlighting"
 
-curl -fsSL https://raw.githubusercontent.com/DSanches92/my-i3wm/main/.zshrc -o ~/.zshrc
-
 sudo chsh -s "$(which zsh)" "$USERNAME"
 
 echo ""
@@ -279,6 +257,30 @@ echo ""
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [6/6] Limpeza e verificação final...${NC}"
 echo ""
+
+echo -e "${YELLOW}:: Configurando snapper (reaproveitando o subvolume @.snapshots)...${NC}"
+paru -S --needed --noconfirm snapper grub-btrfs inotify-tools
+
+if [[ ! -f /etc/snapper/configs/root ]]; then
+  # @.snapshots já existe e está montado em /.snapshots (criado no
+  # install-arch-linux.sh). O 'snapper create-config' tenta criar seu
+  # próprio subvolume nesse caminho e falha se já houver algo montado ali.
+  # Passos abaixo seguem o procedimento oficial do Arch Wiki (Snapper#Creating a new configuration).
+  sudo umount /.snapshots
+  sudo rm -rf /.snapshots
+  sudo snapper -c root create-config /
+  sudo btrfs subvolume delete /.snapshots
+  sudo mkdir /.snapshots
+  sudo mount -a
+  sudo sed -i "s/^ALLOW_USERS=.*/ALLOW_USERS=\"$USERNAME\"/" /etc/snapper/configs/root
+  echo -e "${GREEN}:: Config 'root' do snapper criada, reutilizando @.snapshots.${NC}"
+else
+  echo -e "${YELLOW}:: Config 'root' do snapper já existe. Pulando.${NC}"
+fi
+
+sudo systemctl enable --now snapper-timeline.timer
+sudo systemctl enable --now snapper-cleanup.timer
+sudo systemctl enable --now grub-btrfsd.service
 
 echo -e "${YELLOW}:: Instalando utilitários de manutenção...${NC}"
 paru -S --needed --noconfirm rebuild-detector pkgfile pacman-contrib
@@ -296,7 +298,7 @@ else
 fi
 
 echo -e "${YELLOW}:: Verificando status dos serviços...${NC}"
-for svc in NetworkManager irqbalance fstrim.timer; do
+for svc in NetworkManager irqbalance fstrim.timer snapper-timeline.timer snapper-cleanup.timer; do
   if systemctl is-enabled "$svc" &>/dev/null; then
     echo -e "    ${GREEN}✓${NC} $svc ativado"
   else
@@ -322,14 +324,21 @@ echo "  ║                                                           ║"
 echo "  ║   2. Após reiniciar, execute:                             ║"
 echo "  ║        ./install-i3wm.sh                                  ║"
 echo "  ║                                                           ║"
+echo "  ║   3. Autentique o Claude Code:                            ║"
+echo "  ║        claude                                             ║"
+echo "  ║                                                           ║"
 echo "  ║   Configurações aplicadas:                                ║"
 echo "  ║     - NVIDIA RTX 2060 (nvidia-open-dkms + DRM KMS)        ║"
 echo "  ║       nouveau bloqueado via modprobe.d                    ║"
 echo "  ║     - PipeWire + WirePlumber + codecs                     ║"
-echo "  ║     - swappiness=10 · vfs_cache_pressure=50               ║"
+echo "  ║     - swappiness=10 · vfs_cache_pressure=50                ║"
+echo "  ║     - inotify.max_user_watches=524288 (dev JS/TS)         ║"
 echo "  ║     - I/O scheduler: none (NVMe)                          ║"
 echo "  ║     - irqbalance · fstrim · amd_pstate=active             ║"
 echo "  ║     - ZSH + Oh My Zsh (plugins: autosuggestions,          ║"
 echo "  ║     syntax-highlighting)                                  ║"
+echo "  ║     - Node.js LTS via nvm                                 ║"
+echo "  ║     - Snapper (config 'root' usando @.snapshots)          ║"
+echo "  ║     - Claude Code (instalador nativo)                     ║"
 echo "  ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
