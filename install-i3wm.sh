@@ -55,7 +55,7 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
-    alacritty firefox thunar thunar-volman thunar-archive-plugin \
+    alacritty firefox firefox-i18n-pt-br thunar thunar-volman thunar-archive-plugin \
     thunar-media-tags-plugin gvfs tumbler xdg-user-dirs xdg-utils \
     yazi 7zip unrar unzip jq poppler fd ripgrep fzf zoxide resvg imagemagick ueberzugpp \
     file-roller polybar networkmanager-dmenu-git \
