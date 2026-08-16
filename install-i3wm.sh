@@ -47,7 +47,7 @@ paru -S --needed --noconfirm \
     i3-wm i3blocks i3lock-color i3status  \
     lightdm lightdm-gtk-greeter lightdm-gtk-greeter-settings \
     dmenu picom dunst feh xss-lock \
-    mate-polkit network-manager-applet \
+    mate-polkit gnome-keyring libsecret network-manager-applet \
     bluez bluez-utils blueman
 
 #------------------------------------------------------------------------------#
@@ -68,7 +68,7 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 echo -e "${BLUE}:: [3/5] Habilitando serviços do sistema (LightDM e Bluetooth)...${NC}"
 sudo systemctl enable lightdm.service
-#sudo systemctl set-default graphical.target
+sudo systemctl set-default graphical.target
 sudo systemctl enable --now bluetooth.service
 
 echo -e "${BLUE}:: Clonando configuração i3wm para ~/.config...${NC}"
