@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Cores para saída do terminal
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
@@ -18,10 +18,10 @@ NC='\033[0m'
 SCRIPTS=(
     "install-arch-linux.sh"
     "post-install.sh"
-    "install-i3wm.sh"
+    "install-hyprland.sh"
 )
 
-echo -e "${BLUE}"
+echo -e "${CYAN}"
 echo "  ╔═══════════════════════════════════════════════════════════"
 echo "    > CRIAÇÃO DE PENDRIVE BOOTÁVEL"
 echo "  ╚═══════════════════════════════════════════════════════════"
@@ -109,7 +109,7 @@ fi
 #                        LIMPA O PENDRIVE                                      #
 #------------------------------------------------------------------------------#
 echo ""
-echo -e "${BLUE}:: [1/3] Formatação do pendrive...${NC}"
+echo -e "${CYAN}:: [1/3] Formatação do pendrive...${NC}"
 echo -e "${YELLOW}  Desmontando partições existentes...${NC}"
 sudo umount {$DISK}* 2>/dev/null || true && echo -e "${GREEN}Partições desmontadas!${NC}"
 
@@ -125,7 +125,7 @@ sudo dd if=/dev/zero of="$DISK" bs=1M count=10 status=progress conv=fsync && ech
 #                        GRAVAÇÃO COM DD                                       #
 #------------------------------------------------------------------------------#
 echo ""
-echo -e "${BLUE}:: [2/3] Gravando ISO no pendrive...${NC}"
+echo -e "${CYAN}:: [2/3] Gravando ISO no pendrive...${NC}"
 echo -e "${YELLOW}  dd if=$ISO of=$DISK bs=4M oflag=sync status=progress conv=fsync${NC}"
 echo ""
 
@@ -139,9 +139,9 @@ echo -e "${GREEN}:: [OK] ISO gravada.${NC}"
 #------------------------------------------------------------------------------#
 echo ""
 if [[ "$COPY_SCRIPTS" == false ]]; then
-    echo -e "${BLUE}:: [3/3] Cópia dos scripts desativada (--no-scripts). Pulando etapa.${NC}"
+    echo -e "${CYAN}:: [3/3] Cópia dos scripts desativada (--no-scripts). Pulando etapa.${NC}"
 else
-echo -e "${BLUE}:: [3/3] Copiando scripts de instalação para o pendrive...${NC}"
+echo -e "${CYAN}:: [3/3] Copiando scripts de instalação para o pendrive...${NC}"
 
 # Força o kernel a re-ler a tabela de partições
 echo -e "${YELLOW}:: Aguardando o sistema reconhecer as partições...${NC}"

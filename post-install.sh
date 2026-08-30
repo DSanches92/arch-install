@@ -13,7 +13,7 @@
 set -euo pipefail
 
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
@@ -31,7 +31,7 @@ GRUB_PARAMS="nvidia-drm.modeset=1 nvidia-drm.fbdev=1"
 #------------------------------------------------------------------------------#
 #                         VERIFICAÇÃO DE PRIVILÉGIOS                           #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: Verificando privilégios sudo...${NC}"
+echo -e "${CYAN}:: Verificando privilégios sudo...${NC}"
 if ! sudo -v &>/dev/null; then
   echo -e "${RED}[ERRO] Este script requer privilégios sudo.${NC}"
   echo -e "${YELLOW}:: Execute como usuário com permissão sudo (membro do grupo wheel).${NC}"
@@ -44,7 +44,7 @@ while true; do sudo -v; sleep 60; done &
 SUDO_PID=$!
 trap 'kill $SUDO_PID 2>/dev/null' EXIT
 
-echo -e "${BLUE}"
+echo -e "${CYAN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
 echo "  ║             INSTALAÇÃO DO ARCH LINUX + BTRFS             ║"
 echo "  ║       Ryzen 5 3600 · RTX 2060 · NVMe 1TB · 16GB RAM      ║"
@@ -55,7 +55,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   1. SINCRONIZAÇÃO E ATUALIZAÇÃO COMPLETA                    #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/6] Sincronizando repositórios e atualizando o sistema...${NC}"
+echo -e "${CYAN}:: [1/6] Sincronizando repositórios e atualizando o sistema...${NC}"
 echo ""
 
 paru -Syyuu --noconfirm
@@ -74,7 +74,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   2. DRIVERS NVIDIA (RTX 2060)                               #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/6] Instalando drivers NVIDIA RTX 2060...${NC}"
+echo -e "${CYAN}:: [2/6] Instalando drivers NVIDIA RTX 2060...${NC}"
 echo ""
 
 paru -S --needed --noconfirm \
@@ -156,7 +156,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   3. ÁUDIO (PIPEWIRE + WIREPLUMBER)                         #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/6] Instalando servidores de áudio e codecs...${NC}"
+echo -e "${CYAN}:: [3/6] Instalando servidores de áudio e codecs...${NC}"
 echo ""
 
 paru -S --needed --noconfirm \
@@ -176,7 +176,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   4. OTIMIZAÇÕES DE DESEMPENHO                               #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [4/6] Aplicando otimizações de desempenho...${NC}"
+echo -e "${CYAN}:: [4/6] Aplicando otimizações de desempenho...${NC}"
 echo ""
 
 echo -e "${YELLOW}:: Instalando e Ativando cpupower...${NC}"
@@ -231,7 +231,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   5. ZSH + OH MY ZSH                                         #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [5/6] Instalando ZSH e Oh My Zsh...${NC}"
+echo -e "${CYAN}:: [5/6] Instalando ZSH e Oh My Zsh...${NC}"
 echo ""
 
 paru -S --needed --noconfirm zsh zsh-completions
@@ -255,7 +255,7 @@ echo ""
 #------------------------------------------------------------------------------#
 #                   6. LIMPEZA E VERIFICAÇÃO FINAL                             #
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [6/6] Limpeza e verificação final...${NC}"
+echo -e "${CYAN}:: [6/6] Limpeza e verificação final...${NC}"
 echo ""
 
 echo -e "${YELLOW}:: Configurando snapper (reaproveitando o subvolume @.snapshots)...${NC}"
@@ -322,10 +322,7 @@ echo "  ║   1. Verifique as alterações e reinicie:                  ║"
 echo "  ║        sudo reboot                                        ║"
 echo "  ║                                                           ║"
 echo "  ║   2. Após reiniciar, execute:                             ║"
-echo "  ║        ./install-i3wm.sh                                  ║"
-echo "  ║                                                           ║"
-echo "  ║   3. Autentique o Claude Code:                            ║"
-echo "  ║        claude                                             ║"
+echo "  ║        ./install-hyprland.sh                              ║"
 echo "  ║                                                           ║"
 echo "  ║   Configurações aplicadas:                                ║"
 echo "  ║     - NVIDIA RTX 2060 (nvidia-open-dkms + DRM KMS)        ║"
@@ -337,8 +334,6 @@ echo "  ║     - I/O scheduler: none (NVMe)                          ║"
 echo "  ║     - irqbalance · fstrim · amd_pstate=active             ║"
 echo "  ║     - ZSH + Oh My Zsh (plugins: autosuggestions,          ║"
 echo "  ║     syntax-highlighting)                                  ║"
-echo "  ║     - Node.js LTS via nvm                                 ║"
 echo "  ║     - Snapper (config 'root' usando @.snapshots)          ║"
-echo "  ║     - Claude Code (instalador nativo)                     ║"
 echo "  ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
