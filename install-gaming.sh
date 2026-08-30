@@ -86,32 +86,33 @@ if [[ -n "$PROTON_GE_DIR" ]]; then
             echo -e "${GREEN}:: Proton GE já configurado no Steam.${NC}"
         else
             python3 -c "
-import os, sys
+import os, re
 config = os.path.expanduser('$STEAM_CONFIG')
 ge_name = '$PROTON_GE_NAME'
 with open(config, 'r') as f:
     content = f.read()
-# Check if CompatToolMapping exists
+# Remove qualquer mapeamento padrão ('0') anterior antes de inserir o atual —
+# evita duplicar a chave \"0\" quando o Proton GE é atualizado via protonup-qt.
+content = re.sub(r'\n?[ \t]*\"0\"\s*\{[^{}]*\}', '', content)
+entry = '\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\"\t\t\"' + ge_name + '\"\n\t\t\t\"config\"\t\t\"\"\n\t\t\t\"Priority\"\t\t\"0\"\n\t\t}'
 if '\"CompatToolMapping\"' in content:
-    # Add entry inside existing section
-    import re
+    # Adiciona a entrada dentro da seção existente
     match = list(re.finditer(r'\"CompatToolMapping\"\s*\{', content))
     if match:
         start = match[-1].end()
-        # Find closing brace of this section
+        # Encontra a chave de fechamento desta seção
         depth = 1
         pos = start
         while depth > 0 and pos < len(content):
             if content[pos] == '{': depth += 1
             elif content[pos] == '}': depth -= 1
             pos += 1
-        entry = '\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\" \"' + ge_name + '\"\n\t\t\t\"config\" \"\"\n\t\t\t\"Priority\" \"0\"\n\t\t}'
         content = content[:pos-1] + entry + content[pos-1:]
 else:
-    # Add section before last closing brace
+    # Adiciona a seção antes da última chave de fechamento
     pos = content.rstrip().rfind('}')
     if pos > 0:
-        section = '\n\t\"CompatToolMapping\"\n\t{\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\" \"' + ge_name + '\"\n\t\t\t\"config\" \"\"\n\t\t\t\"Priority\" \"0\"\n\t\t}\n\t}'
+        section = '\n\t\"CompatToolMapping\"\n\t{' + entry + '\n\t}'
         content = content[:pos] + section + content[pos:]
 with open(config, 'w') as f:
     f.write(content)
@@ -151,12 +152,15 @@ if grep -q "\"$GE_NAME\"" "$STEAM_CFG" 2>/dev/null; then
     exit 0
 fi
 python3 -c "
-import os, sys
+import os, re
 cfg = os.path.expanduser('$STEAM_CFG')
 ge = '$GE_NAME'
 with open(cfg, 'r') as f:
     c = f.read()
-import re
+# Remove qualquer mapeamento padrão ('0') anterior antes de inserir o atual —
+# evita duplicar a chave \"0\" quando o Proton GE é atualizado via protonup-qt.
+c = re.sub(r'\n?[ \t]*\"0\"\s*\{[^{}]*\}', '', c)
+e = '\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\"\t\t\"' + ge + '\"\n\t\t\t\"config\"\t\t\"\"\n\t\t\t\"Priority\"\t\t\"0\"\n\t\t}'
 m = list(re.finditer(r'\"CompatToolMapping\"\s*\{', c))
 if m:
     s = m[-1].end()
@@ -165,12 +169,11 @@ if m:
         if c[p] == '{': d += 1
         elif c[p] == '}': d -= 1
         p += 1
-    e = '\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\" \"' + ge + '\"\n\t\t\t\"config\" \"\"\n\t\t\t\"Priority\" \"0\"\n\t\t}'
     c = c[:p-1] + e + c[p-1:]
 else:
     p = c.rstrip().rfind('}')
     if p > 0:
-        s = '\n\t\"CompatToolMapping\"\n\t{\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\" \"' + ge + '\"\n\t\t\t\"config\" \"\"\n\t\t\t\"Priority\" \"0\"\n\t\t}\n\t}'
+        s = '\n\t\"CompatToolMapping\"\n\t{' + e + '\n\t}'
         c = c[:p] + s + c[p:]
 with open(cfg, 'w') as f:
     f.write(c)
@@ -238,7 +241,7 @@ echo -e "     1. Instale o jogo no Steam"
 echo -e "     2. Execute: ${GREEN}~/ark.sh${NC}"
 echo -e "     3. Ou configure manualmente nas propriedades do jogo:"
 echo -e "        ${GREEN}gamemoderun mangohud PROTON_HEAP_DELAY_FREEING=1 %command%${NC}"
-echo -e "     4. Para eliminar tearing no i3wm com NVIDIA + Vulkan:"
+echo -e "     4. Gamescope como compositor aninhado (força resolução/fullscreen exclusivo no Hyprland):"
 echo -e "        ${GREEN}gamescope -w 2560 -h 1440 -r <REFRESH> -- %command%${NC}"
 echo ""
 echo -e "  ${YELLOW}Nota:${NC} este script não reinicia o sistema automaticamente."
