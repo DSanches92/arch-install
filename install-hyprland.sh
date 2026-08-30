@@ -55,7 +55,7 @@ echo -e "${CYAN}:: [2/7] Instalando Firefox, Yazi e utilitários...${NC}"
 paru -S --needed --noconfirm \
     firefox firefox-i18n-pt-br \
     yazi 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick pamixer \
-    pass rofi-pass
+    pass rofi-pass thunar dex
 
 #------------------------------------------------------------------------------#
 # 3. BLUETOOTH, KEYRING E APPLET DE REDE
@@ -86,9 +86,6 @@ done
 if ! grep -q '^export QT_QPA_PLATFORMTHEME=qt6ct$' ~/.zshrc 2>/dev/null; then
   echo "export QT_QPA_PLATFORMTHEME=qt6ct" >> ~/.zshrc
 fi
-# Nota: apps abertos via rofi/waybar não leem o .zshrc — para eles também
-# respeitarem o tema, adicione "env = QT_QPA_PLATFORMTHEME,qt6ct" no
-# hyprland.conf dos dotfiles.
 
 #------------------------------------------------------------------------------#
 # 5. SERVIÇOS DE SISTEMA (SDDM, BLUETOOTH E FIREWALL)
