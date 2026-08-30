@@ -7,7 +7,7 @@
 set -euo pipefail
 
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
@@ -23,7 +23,7 @@ if ! command -v paru &> /dev/null; then
     exit 1
 fi
 
-echo -e "${BLUE}"
+echo -e "${CYAN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
 echo "  ║        STACK DE JOGOS — Steam / Proton GE / MangoHud     ║"
 echo "  ╚══════════════════════════════════════════════════════════╝"
@@ -32,7 +32,7 @@ echo -e "${NC}"
 #------------------------------------------------------------------------------#
 # 1. STEAM, PROTON, OTIMIZAÇÕES
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/3] Instalando Steam, Gamemode, MangoHud, Gamescope, Proton GE...${NC}"
+echo -e "${CYAN}:: [1/3] Instalando Steam, Gamemode, MangoHud, Gamescope, Proton GE...${NC}"
 
 paru -S --needed --noconfirm \
     steam \
@@ -50,7 +50,7 @@ sudo usermod -aG gamemode "$USER"
 #------------------------------------------------------------------------------#
 # 2. CONFIGURAÇÕES DE OTIMIZAÇÃO PARA JOGOS
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/3] Configurando MangoHud e Proton GE...${NC}"
+echo -e "${CYAN}:: [2/3] Configurando MangoHud e Proton GE...${NC}"
 
 mkdir -p ~/.config/MangoHud
 cat > ~/.config/MangoHud/MangoHud.conf << 'EOF'
@@ -182,7 +182,7 @@ chmod +x ~/.local/bin/steam-proton-default
 #------------------------------------------------------------------------------#
 # 3. SCRIPT DE LANÇAMENTO — ARK: SURVIVAL ASCENDED
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/3] Criando ~/ark.sh (lançamento otimizado para Ark: Survival Ascended)...${NC}"
+echo -e "${CYAN}:: [3/3] Criando ~/ark.sh (lançamento otimizado para Ark: Survival Ascended)...${NC}"
 cat > ~/ark.sh << 'SCRIPTEOF'
 #!/usr/bin/env bash
 # Ark: Survival Ascended — Lançamento otimizado

@@ -10,12 +10,12 @@
 set -euo pipefail
 
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}"
+echo -e "${CYAN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
 echo "  ║             INSTALAÇÃO DO ARCH LINUX + BTRFS             ║"
 echo "  ║       Ryzen 5 3600 · RTX 2060 · NVMe 1TB · 16GB RAM      ║"
@@ -78,7 +78,7 @@ fi
 #------------------------------------------------------------------------------#
 if (( IN_CHROOT == 0 )); then
 
-  echo -e "${BLUE}:: [1/9] Verificando ambiente UEFI...${NC}"
+  echo -e "${CYAN}:: [1/9] Verificando ambiente UEFI...${NC}"
   if [[ ! -d /sys/firmware/efi ]]; then
     echo -e ""
     echo -e "${RED}[ERRO] Sistema não foi inicializado em modo UEFI.${NC}"
@@ -89,13 +89,13 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${GREEN}:: [OK] Modo UEFI confirmado.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [2/9] Configurando teclado e relógio...${NC}"
+  echo -e "${CYAN}:: [2/9] Configurando teclado e relógio...${NC}"
   loadkeys "$KEYMAP"
   timedatectl set-ntp true
   echo -e "${GREEN}:: [OK] Teclado ($KEYMAP) e NTP configurados.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [3/9] Verificando conexão com a internet...${NC}"
+  echo -e "${CYAN}:: [3/9] Verificando conexão com a internet...${NC}"
   ping -c 4 archlinux.org >/dev/null || {
     echo -e "${RED}[ERRO] Sem conexão com a internet.${NC}"
     exit 1
@@ -103,7 +103,7 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${GREEN}:: [OK] Conexão com a internet estabelecida.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [4/9] Sincronizando repositórios...${NC}"
+  echo -e "${CYAN}:: [4/9] Sincronizando repositórios...${NC}"
   if command -v reflector &>/dev/null; then
     echo -e "${YELLOW}:: Otimizando mirrorlist com reflector (Brasil)...${NC}"
     reflector --country Brazil --age 12 --protocol https --sort rate \
@@ -113,7 +113,7 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${GREEN}:: [OK] Repositórios sincronizados.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [5/9] Selecionando disco de instalação...${NC}"
+  echo -e "${CYAN}:: [5/9] Selecionando disco de instalação...${NC}"
   echo ""
   echo -e "${YELLOW}:: Discos disponíveis:${NC}"
   echo "  -------------------  "
@@ -157,13 +157,13 @@ if (( IN_CHROOT == 0 )); then
   echo -e "${RED}:: ATENÇÃO: TODOS OS DADOS EM $DISK SERÃO APAGADOS!${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [6/9] Definindo credenciais de acesso...${NC}"
+  echo -e "${CYAN}:: [6/9] Definindo credenciais de acesso...${NC}"
   prompt_password "root" ROOT_PASSWORD
   prompt_password "usuário ($USERNAME)" USER_PASSWORD
   echo -e "${GREEN}:: [OK] Credenciais definidas.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [7/9] Particionando, formatando e montando o disco...${NC}"
+  echo -e "${CYAN}:: [7/9] Particionando, formatando e montando o disco...${NC}"
   echo -e "${YELLOW}:: Apagando assinaturas de sistema de arquivos...${NC}"
   wipefs -a "$DISK"
 
@@ -224,7 +224,7 @@ EOF
   echo -e "${YELLOW}:: Continuando em 5 segundos...${NC}"
   sleep 5
 
-  echo -e "${BLUE}:: [8/9] Instalando pacotes base (pacstrap)...${NC}"
+  echo -e "${CYAN}:: [8/9] Instalando pacotes base (pacstrap)...${NC}"
   pacstrap -K /mnt \
     base base-devel sudo \
     linux-zen linux-zen-headers linux-firmware \
@@ -232,7 +232,7 @@ EOF
     nano openssh git cargo
 
   echo ""
-  echo -e "${BLUE}:: [9/9] Gerando fstab e preparando chroot...${NC}"
+  echo -e "${CYAN}:: [9/9] Gerando fstab e preparando chroot...${NC}"
   echo -e "${YELLOW}:: Gerando fstab...${NC}"
   genfstab -U /mnt >> /mnt/etc/fstab
   sleep 10
@@ -270,7 +270,7 @@ fi
 #------------------------------------------------------------------------------#
 if (( IN_CHROOT == 1 )); then
 
-  echo -e "${BLUE}:: [1/7] Configurando TimeZone e localidade...${NC}"
+  echo -e "${CYAN}:: [1/7] Configurando TimeZone e localidade...${NC}"
   ln -sf /usr/share/zoneinfo/"$TIMEZONE" /etc/localtime
   hwclock --systohc
   timedatectl set-ntp true || true
@@ -285,7 +285,7 @@ if (( IN_CHROOT == 1 )); then
   echo -e "${GREEN}:: [OK] TimeZone e localidade configurados.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [2/7] Configurando hostname e hosts...${NC}"
+  echo -e "${CYAN}:: [2/7] Configurando hostname e hosts...${NC}"
   echo "$HOSTNAME" > /etc/hostname
   cat > /etc/hosts <<EOF
 127.0.0.1    localhost
@@ -295,20 +295,20 @@ EOF
   echo -e "${GREEN}:: [OK] Hostname definido como '$HOSTNAME'.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [3/7] Configurando pacman.conf (cores, parallel downloads, multilib)...${NC}"
+  echo -e "${CYAN}:: [3/7] Configurando pacman.conf (cores, parallel downloads, multilib)...${NC}"
   sed -i "s/^#Color/Color/" /etc/pacman.conf
   sed -i "s/.*ParallelDownloads.*/ParallelDownloads = 10/" /etc/pacman.conf
   sed -i "/\[multilib\]/,/Include/ s/^#//" /etc/pacman.conf
   echo -e "${GREEN}:: [OK] pacman.conf configurado.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [4/7] Habilitando grupo wheel no sudoers...${NC}"
+  echo -e "${CYAN}:: [4/7] Habilitando grupo wheel no sudoers...${NC}"
   sed -i "s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers
   grep wheel /etc/sudoers
   echo -e "${GREEN}:: [OK] Grupo wheel habilitado.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [5/7] Configurando usuário e senhas...${NC}"
+  echo -e "${CYAN}:: [5/7] Configurando usuário e senhas...${NC}"
   if [[ ! -f /root/.chroot-creds ]]; then
     echo -e "${RED}[ERRO] Arquivo de credenciais não encontrado em /root/.chroot-creds.${NC}"
     exit 1
@@ -326,7 +326,7 @@ EOF
   echo -e "${GREEN}:: [OK] Usuário '$USERNAME' criado e configurado.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [6/7] Instalando pacotes essenciais e configurando boot...${NC}"
+  echo -e "${CYAN}:: [6/7] Instalando pacotes essenciais e configurando boot...${NC}"
   echo -e "${YELLOW}:: Instalando GRUB, NetworkManager e dependências...${NC}"
   pacman -Syy --noconfirm \
     dosfstools networkmanager ufw \
@@ -349,7 +349,7 @@ EOF
   echo -e "${GREEN}:: [OK] Boot e serviços configurados.${NC}"
   echo ""
 
-  echo -e "${BLUE}:: [7/7] Instalando Paru (AUR Helper)...${NC}"
+  echo -e "${CYAN}:: [7/7] Instalando Paru (AUR Helper)...${NC}"
   sudo -u "$USERNAME" git clone https://aur.archlinux.org/paru.git /tmp/paru
   cd /tmp/paru
   sudo -u "$USERNAME" makepkg -sc --noconfirm

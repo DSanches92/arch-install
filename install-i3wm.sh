@@ -9,12 +9,12 @@
 set -euo pipefail
 
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}"
+echo -e "${CYAN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
 echo "  ║         INSTALAÇÃO DE AMBIENTE GRÁFICO (i3wm)            ║"
 echo "  ║        Foco em Performance, Estética e Fluidez           ║"
@@ -39,7 +39,7 @@ fi
 #------------------------------------------------------------------------------#
 # 1. INSTALAÇÃO DOS PACOTES DA INTERFACE GRÁFICA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [1/5] Instalando Xorg + i3wm + utilitários gráficos...${NC}"
+echo -e "${CYAN}:: [1/5] Instalando Xorg + i3wm + utilitários gráficos...${NC}"
 paru -S --needed --noconfirm \
     xorg-server xorg-xinit xorg-xauth xorg-xrandr \
     xorg-xset xorg-xprop xorg-xev xclip \
@@ -53,7 +53,7 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 # 2. INSTALAÇÃO DO TERMINAL, GERENCIADORES DE ARQUIVO E YAZI
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
+echo -e "${CYAN}:: [2/5] Instalando Alacritty, Thunar (e utilitários) e Yazi...${NC}"
 paru -S --needed --noconfirm \
     alacritty firefox firefox-i18n-pt-br thunar thunar-volman thunar-archive-plugin \
     thunar-media-tags-plugin gvfs tumbler xdg-user-dirs xdg-utils \
@@ -66,12 +66,12 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 # 3. SERVIÇOS DE SISTEMA E DOTFILES
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [3/5] Habilitando serviços do sistema (LightDM e Bluetooth)...${NC}"
+echo -e "${CYAN}:: [3/5] Habilitando serviços do sistema (LightDM e Bluetooth)...${NC}"
 sudo systemctl enable lightdm.service
 sudo systemctl set-default graphical.target
 sudo systemctl enable --now bluetooth.service
 
-echo -e "${BLUE}:: Clonando configuração i3wm para ~/.config...${NC}"
+echo -e "${CYAN}:: Clonando configuração i3wm para ~/.config...${NC}"
 DOTFILES_TMP="$(mktemp -d)"
 git clone https://github.com/DSanches92/my-i3wm.git "$DOTFILES_TMP"
 rm -rf "$DOTFILES_TMP/.git"
@@ -87,7 +87,7 @@ sudo cp ~/.config/i3/wallpaper_02.png /usr/share/pixmaps/wallpaper_02.png
 #------------------------------------------------------------------------------#
 # 4. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [4/5] Definindo o Alacritty como terminal padrão...${NC}"
+echo -e "${CYAN}:: [4/5] Definindo o Alacritty como terminal padrão...${NC}"
 export TERMINAL=alacritty
 if ! grep -q '^export TERMINAL=alacritty$' ~/.zshrc 2>/dev/null; then
   echo "export TERMINAL=alacritty" >> ~/.zshrc
@@ -96,7 +96,7 @@ fi
 #------------------------------------------------------------------------------#
 # 5. SETA TECLADO BR ABNT2
 #------------------------------------------------------------------------------#
-echo -e "${BLUE}:: [5/5] Definindo o Teclado br abnt2...${NC}"
+echo -e "${CYAN}:: [5/5] Definindo o Teclado br abnt2...${NC}"
 sudo localectl set-x11-keymap br abnt2
 
 echo -e "${GREEN}"
@@ -110,7 +110,7 @@ echo -e "  2. Login i3 → Super+Enter (Alacritty) | Super+d (dmenu)"
 echo -e "  3. Controle de volume já mapeada"
 echo -e "  4. Opcional jogos: ${GREEN}./install-gaming.sh${NC}"
 echo ""
-echo -e "${BLUE}:: REINICIANDO EM 10 SEGUNDOS... ${NC}"
+echo -e "${CYAN}:: REINICIANDO EM 10 SEGUNDOS... ${NC}"
 echo ""
 sleep 10
 reboot
