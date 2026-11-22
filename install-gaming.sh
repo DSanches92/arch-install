@@ -3,6 +3,8 @@
 # Stack de Jogos (Steam, Proton GE, Gamemode, MangoHud)
 # Customizado para: Danilo (Arch Linux + Zen Kernel + RTX 2060)
 #
+# O wine (com wine-mono e wine-gecko) vem do post-install.sh.
+#
 
 set -euo pipefail
 
@@ -30,10 +32,12 @@ echo "  ╚═══════════════════════
 echo -e "${NC}"
 
 #------------------------------------------------------------------------------#
-# 1. STEAM, PROTON, OTIMIZAÇÕES
+# 1. STEAM, PROTON GE, OTIMIZAÇÕES
 #------------------------------------------------------------------------------#
 echo -e "${CYAN}:: [1/3] Instalando Steam, Gamemode, MangoHud, Gamescope, Proton GE...${NC}"
 
+# proton-ge-custom-bin: Proton GE no sistema, atualizado junto com o paru -Syu.
+# python-vdf: usado para editar o config.vdf do Steam com segurança (passo 2).
 paru -S --needed --noconfirm \
     steam \
     gamemode lib32-gamemode \
@@ -41,20 +45,20 @@ paru -S --needed --noconfirm \
     gamescope \
     lutris \
     winetricks \
-    proton-ge-custom \
-    protonup-qt
+    python-vdf \
+    proton-ge-custom-bin
 
 echo -e "${YELLOW}:: Adicionando $USER ao grupo gamemode...${NC}"
 sudo usermod -aG gamemode "$USER"
 
 #------------------------------------------------------------------------------#
-# 2. CONFIGURAÇÕES DE OTIMIZAÇÃO PARA JOGOS
+# 2. MANGOHUD E PROTON GE COMO PADRÃO NO STEAM
 #------------------------------------------------------------------------------#
 echo -e "${CYAN}:: [2/3] Configurando MangoHud e Proton GE...${NC}"
 
 mkdir -p ~/.config/MangoHud
 cat > ~/.config/MangoHud/MangoHud.conf << 'EOF'
-# MangoHud — Configuração para jogos (Ark: Survival Ascended)
+# MangoHud — overlay de FPS e hardware (Shift_R+F12 liga/desliga)
 fps
 frame_timing=0
 cpu_stats
@@ -74,155 +78,125 @@ font_size=20
 background_alpha=0.5
 EOF
 
-echo -e "${YELLOW}:: Configurando Proton GE como camada de compatibilidade padrão no Steam...${NC}"
-PROTON_GE_DIR=$(ls -d /usr/share/steam/compatibilitytools.d/GE-Proton* 2>/dev/null | head -1)
-if [[ -n "$PROTON_GE_DIR" ]]; then
-    PROTON_GE_NAME=$(basename "$PROTON_GE_DIR")
-    echo -e "${GREEN}:: Proton GE detectado: $PROTON_GE_NAME${NC}"
-
-    STEAM_CONFIG="$HOME/.local/share/Steam/config/config.vdf"
-    if [[ -f "$STEAM_CONFIG" ]]; then
-        if grep -q "\"$PROTON_GE_NAME\"" "$STEAM_CONFIG" 2>/dev/null; then
-            echo -e "${GREEN}:: Proton GE já configurado no Steam.${NC}"
-        else
-            python3 -c "
-import os, re
-config = os.path.expanduser('$STEAM_CONFIG')
-ge_name = '$PROTON_GE_NAME'
-with open(config, 'r') as f:
-    content = f.read()
-# Remove qualquer mapeamento padrão ('0') anterior antes de inserir o atual —
-# evita duplicar a chave \"0\" quando o Proton GE é atualizado via protonup-qt.
-content = re.sub(r'\n?[ \t]*\"0\"\s*\{[^{}]*\}', '', content)
-entry = '\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\"\t\t\"' + ge_name + '\"\n\t\t\t\"config\"\t\t\"\"\n\t\t\t\"Priority\"\t\t\"0\"\n\t\t}'
-if '\"CompatToolMapping\"' in content:
-    # Adiciona a entrada dentro da seção existente
-    match = list(re.finditer(r'\"CompatToolMapping\"\s*\{', content))
-    if match:
-        start = match[-1].end()
-        # Encontra a chave de fechamento desta seção
-        depth = 1
-        pos = start
-        while depth > 0 and pos < len(content):
-            if content[pos] == '{': depth += 1
-            elif content[pos] == '}': depth -= 1
-            pos += 1
-        content = content[:pos-1] + entry + content[pos-1:]
-else:
-    # Adiciona a seção antes da última chave de fechamento
-    pos = content.rstrip().rfind('}')
-    if pos > 0:
-        section = '\n\t\"CompatToolMapping\"\n\t{' + entry + '\n\t}'
-        content = content[:pos] + section + content[pos:]
-with open(config, 'w') as f:
-    f.write(content)
-print('OK')
-" 2>/dev/null && echo -e "${GREEN}:: Proton GE configurado como padrão no Steam.${NC}" \
-    || echo -e "${YELLOW}:: Não foi possível editar a config do Steam. Faça manualmente: Steam > Configurações > Steam Play > Avançado.${NC}"
-        fi
-    else
-        echo -e "${YELLOW}:: Steam ainda não foi iniciado. Após o primeiro login, execute:${NC}"
-        echo -e "     ${GREEN}$HOME/.local/bin/steam-proton-default${NC}"
-    fi
-else
-    echo -e "${RED}:: Proton GE não encontrado. O AUR pode ter falhado.${NC}"
-    echo -e "${RED}:: Execute novamente ou use 'protonup-qt' para instalar.${NC}"
-fi
-
+# Script auxiliar: define o Proton GE como padrão para todos os jogos
+# (o mesmo que Steam → Configurações → Compatibilidade). Fica em ~/.local/bin
+# para poder ser rodado de novo depois do primeiro login no Steam.
 mkdir -p ~/.local/bin
 cat > ~/.local/bin/steam-proton-default << 'SCRIPTEOF'
 #!/usr/bin/env bash
-# Define Proton GE como camada de compatibilidade padrão no Steam
+#
+# Define o Proton GE (pacote proton-ge-custom-bin) como ferramenta de
+# compatibilidade padrão do Steam, editando só o CompatToolMapping do
+# config.vdf. Faz backup do arquivo antes e não roda com o Steam aberto
+# (o Steam reescreve o config.vdf ao fechar e desfaria a mudança).
+#
 set -euo pipefail
+
+TOOL_VDF="/usr/share/steam/compatibilitytools.d/proton-ge-custom/compatibilitytool.vdf"
 STEAM_CFG="$HOME/.local/share/Steam/config/config.vdf"
-COMPAT_DIR="/usr/share/steam/compatibilitytools.d"
-GE_DIR=$(ls -d "$COMPAT_DIR"/GE-Proton* 2>/dev/null | head -1)
-if [[ -z "$GE_DIR" ]]; then
-    echo "Proton GE não encontrado em $COMPAT_DIR"
+
+if [[ ! -f "$TOOL_VDF" ]]; then
+    echo "Proton GE não encontrado ($TOOL_VDF)."
+    echo "Instale com: paru -S proton-ge-custom-bin"
     exit 1
 fi
-GE_NAME=$(basename "$GE_DIR")
 if [[ ! -f "$STEAM_CFG" ]]; then
-    echo "Arquivo de configuração do Steam não encontrado."
-    echo "Inicie o Steam ao menos uma vez antes de rodar este script."
+    echo "Config do Steam não encontrada ($STEAM_CFG)."
+    echo "Abra o Steam uma vez, faça login, feche e rode este script de novo."
     exit 1
 fi
-if grep -q "\"$GE_NAME\"" "$STEAM_CFG" 2>/dev/null; then
-    echo "Proton GE ($GE_NAME) já está configurado."
-    exit 0
+if pgrep -x steam &>/dev/null; then
+    echo "O Steam está aberto. Feche o Steam (Steam → Sair) e rode de novo."
+    exit 1
 fi
-python3 -c "
-import os, re
-cfg = os.path.expanduser('$STEAM_CFG')
-ge = '$GE_NAME'
-with open(cfg, 'r') as f:
-    c = f.read()
-# Remove qualquer mapeamento padrão ('0') anterior antes de inserir o atual —
-# evita duplicar a chave \"0\" quando o Proton GE é atualizado via protonup-qt.
-c = re.sub(r'\n?[ \t]*\"0\"\s*\{[^{}]*\}', '', c)
-e = '\n\t\t\"0\"\n\t\t{\n\t\t\t\"name\"\t\t\"' + ge + '\"\n\t\t\t\"config\"\t\t\"\"\n\t\t\t\"Priority\"\t\t\"0\"\n\t\t}'
-m = list(re.finditer(r'\"CompatToolMapping\"\s*\{', c))
-if m:
-    s = m[-1].end()
-    d = 1; p = s
-    while d > 0 and p < len(c):
-        if c[p] == '{': d += 1
-        elif c[p] == '}': d -= 1
-        p += 1
-    c = c[:p-1] + e + c[p-1:]
-else:
-    p = c.rstrip().rfind('}')
-    if p > 0:
-        s = '\n\t\"CompatToolMapping\"\n\t{' + e + '\n\t}'
-        c = c[:p] + s + c[p:]
-with open(cfg, 'w') as f:
-    f.write(c)
-print('Proton GE (' + ge + ') configurado como padrão. Reinicie o Steam.')
-" || echo "Erro: Python3 não encontrado ou falha na configuração."
+
+BACKUP="$STEAM_CFG.bak-$(date +%Y%m%d-%H%M%S)"
+cp -p "$STEAM_CFG" "$BACKUP"
+
+# Sai com 0 quando alterou, 3 quando já estava certo, outro código em erro.
+rc=0
+python3 - "$TOOL_VDF" "$STEAM_CFG" << 'PY' || rc=$?
+import os, sys, tempfile
+import vdf
+
+tool_vdf, steam_cfg = sys.argv[1], sys.argv[2]
+
+# Nome interno do Proton GE (o pacote -bin usa "Proton-GE").
+with open(tool_vdf, encoding="utf-8") as f:
+    tools = vdf.load(f, mapper=vdf.VDFDict)
+names = list(tools["compatibilitytools"]["compat_tools"].keys())
+if len(names) != 1:
+    sys.exit(f"Esperava 1 ferramenta em {tool_vdf}, achei: {names}")
+ge_name = names[0]
+
+# VDFDict preserva a ordem e as chaves duplicadas do arquivo original.
+with open(steam_cfg, encoding="utf-8") as f:
+    cfg = vdf.load(f, mapper=vdf.VDFDict)
+
+def child(d, key):
+    """Busca (ou cria) a subchave, sem diferenciar maiúsculas de minúsculas."""
+    for k in d.keys():
+        if k.lower() == key.lower():
+            return d[k]
+    d[key] = vdf.VDFDict()
+    return d[key]
+
+node = cfg
+for key in ("InstallConfigStore", "Software", "Valve", "Steam", "CompatToolMapping"):
+    node = child(node, key)
+
+current = node.get("0")
+if current is not None and current.get("name") == ge_name:
+    print(f"Proton GE ({ge_name}) já é o padrão. Nada a fazer.")
+    sys.exit(3)
+
+# "0" é o mapeamento padrão para todos os jogos. Os mapeamentos por jogo
+# (chaves com o App ID) não são tocados.
+node.remove_all_for("0")
+entry = vdf.VDFDict()
+entry["name"] = ge_name
+entry["config"] = ""
+entry["priority"] = "75"
+node["0"] = entry
+
+# Grava num arquivo temporário e troca no final: se algo falhar no meio,
+# o config.vdf original continua intacto.
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(steam_cfg), prefix=".config.vdf.")
+with os.fdopen(fd, "w", encoding="utf-8") as f:
+    vdf.dump(cfg, f, pretty=True)
+os.chmod(tmp, os.stat(steam_cfg).st_mode & 0o777)
+os.replace(tmp, steam_cfg)
+print(f"Proton GE ({ge_name}) definido como padrão no Steam.")
+PY
+
+case "$rc" in
+    0) echo "Backup do config anterior: $BACKUP" ;;
+    3) rm -f "$BACKUP" ;;
+    *) rm -f "$BACKUP"; echo "Falha ao editar o config.vdf; nada foi alterado."; exit "$rc" ;;
+esac
 SCRIPTEOF
 chmod +x ~/.local/bin/steam-proton-default
 
-#------------------------------------------------------------------------------#
-# 3. SCRIPT DE LANÇAMENTO — ARK: SURVIVAL ASCENDED
-#------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [3/3] Criando ~/ark.sh (lançamento otimizado para Ark: Survival Ascended)...${NC}"
-cat > ~/ark.sh << 'SCRIPTEOF'
-#!/usr/bin/env bash
-# Ark: Survival Ascended — Lançamento otimizado
-# Uso: ./ark.sh
-#
-# Opções de lançamento equivalentes para configurar no Steam:
-#   gamemoderun mangohud PROTON_HEAP_DELAY_FREEING=1 %command%
-#
-# Steam App ID: 2399830 (Ark: Survival Ascended)
-
-set -euo pipefail
-
-ARK_APPID="2399830"
-
-echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║    Ark: Survival Ascended — Modo Otimizado              ║"
-echo "  ╚══════════════════════════════════════════════════════════╝"
-echo ""
-echo "  Otimizações ativas:"
-echo "    • PROTON_HEAP_DELAY_FREEING=1 (reduz stuttering no UE5)"
-echo "    • gamemoderun (CPU/GPU em modo desempenho)"
-echo "    • MangoHud (overlay de FPS e hardware)"
-echo ""
-
-export PROTON_HEAP_DELAY_FREEING=1
-export MANGOHUD=1
-
-if ! command -v steam &>/dev/null; then
-    echo "[ERRO] Steam não encontrado. Instale o steam primeiro."
-    exit 1
+echo -e "${YELLOW}:: Definindo o Proton GE como padrão no Steam...${NC}"
+if ! ~/.local/bin/steam-proton-default; then
+    echo -e "${YELLOW}:: Não deu para aplicar agora. Depois do primeiro login no Steam, feche-o e rode:${NC}"
+    echo -e "     ${GREEN}steam-proton-default${NC}"
+    echo -e "${YELLOW}   Ou manualmente: Steam → Configurações → Compatibilidade → Proton-GE.${NC}"
 fi
 
-echo "  Iniciando Steam e Ark: Survival Ascended..."
-echo ""
-gamemoderun steam steam://rungameid/"$ARK_APPID"
-SCRIPTEOF
-chmod +x ~/ark.sh
+#------------------------------------------------------------------------------#
+# 3. LIMPEZA DO ~/ark.sh ANTIGO
+#------------------------------------------------------------------------------#
+# O ~/ark.sh só aplicava as variáveis se o Steam ainda estivesse fechado. As
+# opções de inicialização do jogo no Steam (ver o final) funcionam sempre.
+echo -e "${CYAN}:: [3/3] Verificando o ~/ark.sh antigo...${NC}"
+if [[ -f ~/ark.sh ]]; then
+    ARK_BACKUP=~/ark.sh.bak-"$(date +%Y%m%d-%H%M%S)"
+    mv ~/ark.sh "$ARK_BACKUP"
+    echo -e "${YELLOW}:: ~/ark.sh renomeado para $ARK_BACKUP. Use as opções de inicialização abaixo.${NC}"
+else
+    echo -e "    Nada a fazer."
+fi
 
 echo -e "${GREEN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
@@ -230,18 +204,17 @@ echo "  ║   Stack de jogos instalado com sucesso!                  ║"
 echo "  ╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 echo -e "  ${YELLOW}🎮 Recursos instalados:${NC}"
-echo -e "     ✓ Steam + Proton GE (padrão configurado via script)"
-echo -e "     ✓ Gamemode + MangoHud + Gamescope + Wine + Lutris"
+echo -e "     ✓ Steam + Proton GE (proton-ge-custom-bin, atualiza com o paru -Syu)"
+echo -e "     ✓ Gamemode + MangoHud + Gamescope + Lutris + Winetricks"
 echo -e "     ✓ Overlay MangoHud em ~/.config/MangoHud/MangoHud.conf"
-echo -e "     ✓ Atalho otimizado: ${GREEN}~/ark.sh${NC}"
-echo -e "     ✓ Script auxiliar: ${GREEN}~/.local/bin/steam-proton-default${NC} (se falhou acima)"
+echo -e "     ✓ Script auxiliar: ${GREEN}steam-proton-default${NC} (Proton GE como padrão)"
 echo ""
-echo -e "  ${YELLOW}⚙️  Para o Ark: Survival Ascended:${NC}"
-echo -e "     1. Instale o jogo no Steam"
-echo -e "     2. Execute: ${GREEN}~/ark.sh${NC}"
-echo -e "     3. Ou configure manualmente nas propriedades do jogo:"
-echo -e "        ${GREEN}gamemoderun mangohud PROTON_HEAP_DELAY_FREEING=1 %command%${NC}"
-echo -e "     4. Gamescope como compositor aninhado (força resolução/fullscreen exclusivo no Hyprland):"
-echo -e "        ${GREEN}gamescope -w 2560 -h 1440 -r <REFRESH> -- %command%${NC}"
+echo -e "  ${YELLOW}⚙️  Ark: Survival Ascended (App ID 2399830):${NC}"
+echo -e "     Steam → Biblioteca → botão direito no jogo → Propriedades → Opções de inicialização:"
+echo -e "        ${GREEN}PROTON_HEAP_DELAY_FREEING=1 gamemoderun mangohud %command%${NC}"
+echo -e "     As variáveis vêm antes dos comandos; depois do %command% elas virariam argumento do jogo."
 echo ""
-echo -e "  ${YELLOW}Nota:${NC} este script não reinicia o sistema automaticamente."
+echo -e "  ${YELLOW}🖥️  Gamescope (força resolução/tela cheia no Hyprland), opcional:${NC}"
+echo -e "        ${GREEN}gamescope -W 2560 -H 1080 -r 75 -f -- %command%${NC}"
+echo ""
+echo -e "  ${YELLOW}Nota:${NC} faça logout/login para o grupo gamemode valer. Este script não reinicia o sistema."

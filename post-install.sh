@@ -27,6 +27,10 @@ GRUB_FILE="/etc/default/grub"
 MKINITCPIO_FILE="/etc/mkinitcpio.conf"
 NVIDIA_MODULES="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
 GRUB_PARAMS="nvidia-drm.modeset=1 nvidia-drm.fbdev=1"
+CPUPOWER_FILE="/etc/default/cpupower-service.conf"
+CPU_GOVERNOR="powersave"         # com amd-pstate-epp, quem decide a frequência é o EPP
+CPU_EPP="balance_performance"
+NVM_VERSION="v0.41.0"            # https://github.com/nvm-sh/nvm/releases
 
 #------------------------------------------------------------------------------#
 #                         VERIFICAÇÃO DE PRIVILÉGIOS                           #
@@ -58,14 +62,15 @@ echo ""
 echo -e "${CYAN}:: [1/6] Sincronizando repositórios e atualizando o sistema...${NC}"
 echo ""
 
-paru -Syyuu --noconfirm
+paru -Syu --noconfirm
 
 echo ""
 echo -e "${YELLOW}:: Instalando pacotes complementares e Fonts...${NC}"
 paru -S --needed --noconfirm \
   smartmontools python rsync fastfetch reflector github-cli \
   ttf-iosevka-nerd ttf-roboto-mono ttf-opensans ttf-hack-nerd \
-  otf-geist-mono-nerd noto-fonts-emoji awesome-terminal-fonts
+  otf-geist-mono-nerd noto-fonts-emoji awesome-terminal-fonts \
+  samba podman wine wine-mono wine-gecko lib32-libpulse
 
 echo ""
 echo -e "${GREEN}:: [1/6] Concluído.${NC}"
@@ -133,7 +138,8 @@ if [[ -f "$MKINITCPIO_FILE" ]]; then
   echo -e "${GREEN}:: MODULES atualizado: ($NEW_MODULES)${NC}"
 
   CURRENT_HOOKS=$(grep "^HOOKS=" "$MKINITCPIO_FILE" | sed -n 's/.*HOOKS=\((.*)\).*/\1/p' | tr -d '()')
-  NEW_HOOKS=$(echo "$CURRENT_HOOKS" | sed 's/kms//g' | xargs)
+  # Remove só o hook "kms" exato (sem afetar outros nomes que contenham "kms").
+  NEW_HOOKS=$(echo "$CURRENT_HOOKS" | tr ' ' '\n' | grep -vx 'kms' | xargs || true)
   if [[ "$NEW_HOOKS" != "$CURRENT_HOOKS" ]]; then
     sudo sed -i "s|^HOOKS=.*|HOOKS=($NEW_HOOKS)|" "$MKINITCPIO_FILE"
     echo -e "${GREEN}:: 'kms' removido dos HOOKS.${NC}"
@@ -181,7 +187,13 @@ echo ""
 
 echo -e "${YELLOW}:: Instalando e Ativando cpupower...${NC}"
 paru -S --needed --noconfirm cpupower
+# O arquivo vem todo comentado; sem GOVERNOR/EPP o serviço não aplica nada.
+sudo sed -i \
+  -e "s|^#\?GOVERNOR=.*|GOVERNOR='$CPU_GOVERNOR'|" \
+  -e "s|^#\?EPP=.*|EPP='$CPU_EPP'|" \
+  "$CPUPOWER_FILE"
 sudo systemctl enable --now cpupower
+echo -e "${GREEN}:: cpupower: governor=$CPU_GOVERNOR · EPP=$CPU_EPP${NC}"
 
 echo -e "${YELLOW}:: Ajustando swappiness para 10...${NC}"
 echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swappiness.conf >/dev/null
@@ -234,7 +246,7 @@ echo ""
 echo -e "${CYAN}:: [5/6] Instalando ZSH e Oh My Zsh...${NC}"
 echo ""
 
-paru -S --needed --noconfirm zsh zsh-completions
+paru -S --needed --noconfirm zsh zsh-completions sqlite
 
 RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
@@ -245,6 +257,35 @@ ZSH_CUSTOM_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 [[ -d "$ZSH_CUSTOM_DIR/plugins/zsh-syntax-highlighting" ]] || \
   git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
     "$ZSH_CUSTOM_DIR/plugins/zsh-syntax-highlighting"
+# zsh-histdb: histórico em SQLite (usado pelo zsh/danilo.zsh do my-hyprland).
+[[ -d "$ZSH_CUSTOM_DIR/plugins/zsh-histdb" ]] || \
+  git clone --depth=1 https://github.com/larkery/zsh-histdb \
+    "$ZSH_CUSTOM_DIR/plugins/zsh-histdb"
+
+# nvm e bun pelos instaladores oficiais. Os dois tentam editar o .zshrc;
+# PROFILE=/dev/null (nvm) e SHELL=sh (bun) evitam isso, porque o PATH e o
+# carregamento deles já ficam no zsh/danilo.zsh do my-hyprland.
+echo -e "${YELLOW}:: Instalando nvm $NVM_VERSION...${NC}"
+if [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
+  curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh" | \
+    PROFILE=/dev/null bash
+else
+  echo -e "${YELLOW}:: nvm já instalado. Pulando.${NC}"
+fi
+
+echo -e "${YELLOW}:: Instalando bun...${NC}"
+if [[ ! -x "$HOME/.bun/bin/bun" ]]; then
+  curl -fsSL https://bun.sh/install | SHELL=sh bash
+  # Gera ~/.bun/_bun (completions do zsh). O "bun completions" também edita o
+  # ~/.zshrc; com um HOME temporário sem .zshrc, ele só grava o _bun.
+  BUN_DIR="$HOME/.bun"
+  BUN_TMP_HOME=$(mktemp -d)
+  HOME="$BUN_TMP_HOME" BUN_INSTALL="$BUN_DIR" IS_BUN_AUTO_UPDATE=true SHELL=zsh \
+    "$BUN_DIR/bin/bun" completions &>/dev/null || true
+  rm -rf "$BUN_TMP_HOME"
+else
+  echo -e "${YELLOW}:: bun já instalado. Pulando.${NC}"
+fi
 
 sudo chsh -s "$(which zsh)" "$USERNAME"
 
@@ -332,8 +373,9 @@ echo "  ║     - swappiness=10 · vfs_cache_pressure=50                ║"
 echo "  ║     - inotify.max_user_watches=524288 (dev JS/TS)         ║"
 echo "  ║     - I/O scheduler: none (NVMe)                          ║"
 echo "  ║     - irqbalance · fstrim · amd_pstate=active             ║"
-echo "  ║     - ZSH + Oh My Zsh (plugins: autosuggestions,          ║"
-echo "  ║     syntax-highlighting)                                  ║"
+echo "  ║     - cpupower: powersave + EPP balance_performance       ║"
+echo "  ║     - ZSH + Oh My Zsh (autosuggestions, syntax-           ║"
+echo "  ║       highlighting, histdb) · nvm · bun                   ║"
 echo "  ║     - Snapper (config 'root' usando @.snapshots)          ║"
 echo "  ╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"

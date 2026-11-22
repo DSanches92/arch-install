@@ -229,21 +229,23 @@ EOF
     base base-devel sudo \
     linux-zen linux-zen-headers linux-firmware \
     amd-ucode btrfs-progs exfatprogs \
-    nano openssh git cargo
+    nano openssh git rust
 
   echo ""
   echo -e "${CYAN}:: [9/9] Gerando fstab e preparando chroot...${NC}"
   echo -e "${YELLOW}:: Gerando fstab...${NC}"
   genfstab -U /mnt >> /mnt/etc/fstab
-  sleep 10
 
   echo ""
   echo -e "${YELLOW}:: Gravando credenciais temporárias para o chroot...${NC}"
-  cat > /mnt/root/.chroot-creds <<CREDS
-ROOT_PASSWORD='$ROOT_PASSWORD'
-USER_PASSWORD='$USER_PASSWORD'
-CREDS
-  chmod 600 /mnt/root/.chroot-creds
+  # Se o chroot falhar antes de apagar o arquivo (ou o script for
+  # interrompido), as senhas não ficam gravadas no disco novo.
+  trap 'rm -f /mnt/root/.chroot-creds' EXIT
+  # printf %q escapa aspas e caracteres especiais da senha, para que o
+  # "source" no chroot leia o valor exato (sem quebrar nem executar nada).
+  ( umask 077
+    printf 'ROOT_PASSWORD=%q\nUSER_PASSWORD=%q\n' "$ROOT_PASSWORD" "$USER_PASSWORD" \
+      > /mnt/root/.chroot-creds )
 
   echo -e "${YELLOW}:: Copiando script para o ambiente chroot...${NC}"
   cp "$0" /mnt/root/install-arch-linux.sh
@@ -273,7 +275,8 @@ if (( IN_CHROOT == 1 )); then
   echo -e "${CYAN}:: [1/7] Configurando TimeZone e localidade...${NC}"
   ln -sf /usr/share/zoneinfo/"$TIMEZONE" /etc/localtime
   hwclock --systohc
-  timedatectl set-ntp true || true
+  # timedatectl não funciona dentro do chroot; habilita o serviço para o 1º boot.
+  systemctl enable systemd-timesyncd
 
   sed -i "s/^#$LOCALE_FALLBACK/$LOCALE_FALLBACK/" /etc/locale.gen
   sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen

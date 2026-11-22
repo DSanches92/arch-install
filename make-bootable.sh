@@ -19,6 +19,7 @@ SCRIPTS=(
     "install-arch-linux.sh"
     "post-install.sh"
     "install-hyprland.sh"
+    "install-gaming.sh"
 )
 
 echo -e "${CYAN}"
@@ -71,6 +72,16 @@ if ! lsblk -no TYPE "$DISK" 2>/dev/null | grep -q '^disk$'; then
     exit 1
 fi
 
+# Recusa o disco do sistema: se alguma partição dele estiver montada em um
+# caminho essencial, é o disco onde o sistema está rodando, não um pendrive.
+SYSTEM_MOUNT=$(lsblk -lnpo MOUNTPOINTS "$DISK" 2>/dev/null | \
+    grep -xE '/|/boot|/boot/efi|/efi|/home' | head -1 || true)
+if [[ -n "$SYSTEM_MOUNT" ]]; then
+    echo -e "${RED}[ERRO] '$DISK' tem uma partição montada em '$SYSTEM_MOUNT'.${NC}"
+    echo -e "${RED}       Esse é o disco do sistema, não um pendrive. Abortando.${NC}"
+    exit 1
+fi
+
 # Valida se o arquivo ISO existe
 if [[ ! -f "$ISO" ]]; then
     echo -e "${RED}[ERRO] '$ISO' não encontrado.${NC}"
@@ -111,7 +122,18 @@ fi
 echo ""
 echo -e "${CYAN}:: [1/3] Formatação do pendrive...${NC}"
 echo -e "${YELLOW}  Desmontando partições existentes...${NC}"
-sudo umount {$DISK}* 2>/dev/null || true && echo -e "${GREEN}Partições desmontadas!${NC}"
+# Desmonta cada partição do disco que estiver montada (ex.: automount do
+# Thunar/udisks). Gravar com dd por cima de uma partição montada corrompe o pendrive.
+while read -r part mnt; do
+    [[ -n "$mnt" ]] || continue
+    if [[ "$mnt" == "[SWAP]" ]]; then
+        sudo swapoff "/dev/$part"
+    else
+        sudo umount "/dev/$part"
+    fi
+    echo -e "  ${GREEN}✓${NC} /dev/$part desmontada ($mnt)"
+done < <(lsblk -lnpo NAME,MOUNTPOINT "$DISK" | sed 's|^/dev/||' | tail -n +2)
+echo -e "${GREEN}Partições desmontadas!${NC}"
 
 echo ""
 echo -e "${YELLOW}  Limpando assinaturas do disco...${NC}"
@@ -195,16 +217,16 @@ else
 
     # Tenta 2: montagem explicitamente como vfat
     if [[ "$MOUNT_OK" == false ]]; then
-        MOUNT_MSG=$(sudo mount -t vfat -o rw,flush,uid=0,gid=0,fmask=000,dmask=000 "$PART" "$MOUNT_POINT" 2>&1)
-        if [[ $? -eq 0 ]]; then
+        # A atribuição fica dentro do "if": com set -e, um MSG=$(...) que falha
+        # sozinho na linha encerraria o script antes da próxima tentativa.
+        if MOUNT_MSG=$(sudo mount -t vfat -o rw,flush,uid=0,gid=0,fmask=000,dmask=000 "$PART" "$MOUNT_POINT" 2>&1); then
             MOUNT_OK=true
         fi
     fi
 
     # Tenta 3: montagem sem opções extras (último recurso)
     if [[ "$MOUNT_OK" == false ]]; then
-        MOUNT_MSG=$(sudo mount "$PART" "$MOUNT_POINT" 2>&1)
-        if [[ $? -eq 0 ]]; then
+        if MOUNT_MSG=$(sudo mount "$PART" "$MOUNT_POINT" 2>&1); then
             MOUNT_OK=true
             sudo mount -o remount,rw "$MOUNT_POINT" 2>/dev/null || true
         fi

@@ -5,8 +5,13 @@
 #
 # Terminal: Alacritty | FM: Yazi | Barra: Waybar | Launcher: Rofi (Wayland)
 #
+# Os dotfiles vêm do repositório my-hyprland e são aplicados pelo install.sh
+# dele (cópia para ~/.config + zsh + tema do SDDM).
+#
 
 set -euo pipefail
+
+DOTFILES_REPO="https://github.com/DSanches92/my-hyprland.git"
 
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -39,28 +44,32 @@ fi
 #------------------------------------------------------------------------------#
 # 1. INSTALAÇÃO DO HYPRLAND + FERRAMENTAS WAYLAND
 #------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [1/7] Instalando Hyprland + ferramentas Wayland...${NC}"
+echo -e "${CYAN}:: [1/6] Instalando Hyprland + ferramentas Wayland...${NC}"
 paru -S --needed --noconfirm \
     hyprland hyprlock hypridle hyprcursor hyprpaper hyprpicker \
-    waybar alacritty rofi-wayland qt5-wayland qt6-wayland dunst \
+    waybar alacritty rofi qt5-wayland qt6-wayland dunst \
     xdg-desktop-portal-hyprland xdg-desktop-portal-gtk hyprpolkitagent \
-    cliphist hyprshot wlogout swappy \
-    ttf-jetbrains-mono-nerd ttf-font-awesome noto-fonts \
+    cliphist wl-clipboard hyprshot wlogout swappy \
+    ttf-jetbrains-mono-nerd woff2-font-awesome noto-fonts \
     pavucontrol egl-wayland
 
 #------------------------------------------------------------------------------#
 # 2. NAVEGADOR, GERENCIADOR DE ARQUIVOS (YAZI) E UTILITÁRIOS
 #------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [2/7] Instalando Firefox, Yazi e utilitários...${NC}"
+echo -e "${CYAN}:: [2/6] Instalando Firefox, Yazi e utilitários...${NC}"
 paru -S --needed --noconfirm \
     firefox firefox-i18n-pt-br \
     yazi 7zip jq poppler fd ripgrep fzf zoxide resvg imagemagick pamixer \
-    pass rofi-pass thunar dex
+    thunar dex
+
+# Corretor ortográfico pt-BR (o Firefox lê /usr/share/hunspell). Vem do AUR e
+# precisa do qt6-webengine só para compilar; --removemake remove ele depois.
+paru -S --needed --noconfirm --removemake hunspell-pt-br
 
 #------------------------------------------------------------------------------#
 # 3. BLUETOOTH, KEYRING E APPLET DE REDE
 #------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [3/7] Instalando Bluetooth, keyring e applet de rede...${NC}"
+echo -e "${CYAN}:: [3/6] Instalando Bluetooth, keyring e applet de rede...${NC}"
 paru -S --needed --noconfirm \
     bluez bluez-utils blueman \
     gnome-keyring libsecret network-manager-applet
@@ -68,29 +77,18 @@ paru -S --needed --noconfirm \
 #------------------------------------------------------------------------------#
 # 4. TEMA ESCURO (GTK + QT)
 #------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [4/7] Instalando e configurando tema escuro (GTK + Qt)...${NC}"
+echo -e "${CYAN}:: [4/6] Instalando e configurando tema escuro (GTK + Qt)...${NC}"
 paru -S --needed --noconfirm \
     catppuccin-gtk-theme-macchiato papirus-icon-theme nwg-look qt5ct qt6ct
 
-mkdir -p ~/.config/gtk-3.0 ~/.config/gtk-4.0
-for gtk_ini in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini; do
-  cat > "$gtk_ini" <<'GTKEOF'
-[Settings]
-gtk-application-prefer-dark-theme=1
-gtk-theme-name=Catppuccin-Macchiato-Standard-Blue-Dark
-gtk-icon-theme-name=Papirus-Dark
-GTKEOF
-done
-
+# Os settings.ini do GTK 3/4 e o qt6ct vêm dos dotfiles (passo 6), e o
+# QT_QPA_PLATFORMTHEME é definido no hypr/hyprland.lua.
 # Ajuste fino de tema/acento pode ser feito depois com `nwg-look`.
-if ! grep -q '^export QT_QPA_PLATFORMTHEME=qt6ct$' ~/.zshrc 2>/dev/null; then
-  echo "export QT_QPA_PLATFORMTHEME=qt6ct" >> ~/.zshrc
-fi
 
 #------------------------------------------------------------------------------#
-# 5. SERVIÇOS DE SISTEMA (SDDM, BLUETOOTH E FIREWALL)
+# 5. SERVIÇOS DE SISTEMA (SDDM E BLUETOOTH)
 #------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [5/7] Instalando e habilitando SDDM (display manager)...${NC}"
+echo -e "${CYAN}:: [5/6] Instalando e habilitando SDDM (display manager)...${NC}"
 paru -S --needed --noconfirm sddm
 sudo systemctl enable sddm.service
 
@@ -108,40 +106,18 @@ fi
 sudo systemctl set-default graphical.target
 sudo systemctl enable --now bluetooth.service
 
-echo -e "${CYAN}:: Ativando firewall...${NC}"
-sudo ufw enable
-sudo systemctl enable ufw
+# O firewall (ufw) já é ativado pelo install-arch-linux.sh.
 
 #------------------------------------------------------------------------------#
-# 6. DOTFILES
+# 6. DOTFILES (my-hyprland)
 #------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [6/7] Clonando configuração Hyprland para ~/.config...${NC}"
+echo -e "${CYAN}:: [6/6] Aplicando os dotfiles do my-hyprland...${NC}"
 DOTFILES_TMP="$(mktemp -d)"
-git clone https://github.com/DSanches92/my-hyprland.git "$DOTFILES_TMP"
-rm -rf "$DOTFILES_TMP/.git"
-mkdir -p ~/.config
-cp -rT "$DOTFILES_TMP" ~/.config
-rm -rf "$DOTFILES_TMP"
-
-# Nota: diferente do X11 (localectl set-x11-keymap), o layout de teclado no
-# Hyprland/Wayland é definido dentro do hyprland.conf (bloco "input { kb_layout = br }"),
-# que vem do repositório de dotfiles acima — não faz sentido setar via localectl aqui.
-#
-# Nota (tecla de volume do teclado): o Hyprland lê os keycodes XF86AudioRaiseVolume/
-# LowerVolume/Mute direto do evdev, sem a camada de xmodmap que dava problema no i3wm.
-# Ainda precisa de um bind no hyprland.conf dos dotfiles, ex:
-#   bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
-#   bind = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-#   bind = , XF86AudioMute,        exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ toggle-mute
-
-#------------------------------------------------------------------------------#
-# 7. CONFIGURAÇÃO DO ALACRITTY COMO TERMINAL PADRÃO DO SISTEMA
-#------------------------------------------------------------------------------#
-echo -e "${CYAN}:: [7/7] Definindo o Alacritty como terminal padrão...${NC}"
-export TERMINAL=alacritty
-if ! grep -q '^export TERMINAL=alacritty$' ~/.zshrc 2>/dev/null; then
-  echo "export TERMINAL=alacritty" >> ~/.zshrc
-fi
+trap 'rm -rf "$DOTFILES_TMP"' EXIT
+git clone --depth=1 "$DOTFILES_REPO" "$DOTFILES_TMP"
+# Copia as configs para ~/.config (com backup .bak-<data>), aplica o zsh por
+# cima do Oh My Zsh e instala o tema do SDDM (com sudo).
+"$DOTFILES_TMP/install.sh"
 
 echo -e "${GREEN}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
